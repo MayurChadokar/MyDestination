@@ -1,0 +1,271 @@
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { 
+  Bell, 
+  Lock, 
+  User, 
+  LogOut, 
+  Eye, 
+  EyeOff,
+  ShieldCheck, 
+  MessageSquare,
+  Globe,
+  Settings2,
+  Database,
+  Trash2,
+  RefreshCcw,
+  CheckCircle2,
+  Building2,
+  PlusCircle,
+  ChevronRight
+} from "lucide-react";
+import { useAuth } from "../../context/AuthContext";
+
+import VendorLayout from "../layouts/VendorLayout";
+
+const VendorSettings = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const isVenueManager = user?.category === "Venue Manager";
+
+  const [settings, setSettings] = useState({
+    name: user?.name || "Zoya Khan",
+    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop",
+    notifications: {
+      leads: true,
+      whatsapp: true
+    },
+    category: user?.category || "Photographer",
+    location: user?.location || "Mumbai",
+    experience: user?.experience || "5+ Years"
+  });
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const avatarInputRef = React.useRef(null);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('vendorPreviewData');
+    if (saved) {
+      const data = JSON.parse(saved);
+      setSettings(prev => ({ 
+        ...prev, 
+        name: data.name || prev.name,
+        avatar: data.banner || prev.avatar,
+        category: data.category || prev.category,
+        location: data.location || prev.location
+      }));
+    }
+
+
+    const handleUpdate = (e) => {
+      if (e.detail) {
+        setSettings(prev => ({ 
+          ...prev, 
+          name: e.detail.name || prev.name,
+          avatar: e.detail.banner || prev.avatar
+        }));
+      }
+    };
+
+    window.addEventListener('vendorProfileUpdate', handleUpdate);
+    return () => window.removeEventListener('vendorProfileUpdate', handleUpdate);
+  }, []);
+
+  const toggleNotification = (key) => {
+    setSettings(prev => ({
+      ...prev,
+      notifications: { ...prev.notifications, [key]: !prev.notifications[key] }
+    }));
+  };
+
+  const handleAvatarUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setSettings(prev => ({ ...prev, avatar: reader.result }));
+        // Sync with global profile
+        const current = JSON.parse(localStorage.getItem('vendorPreviewData') || '{}');
+        const updated = { ...current, banner: reader.result };
+        try {
+          localStorage.setItem('vendorPreviewData', JSON.stringify(updated));
+          window.dispatchEvent(new CustomEvent('vendorProfileUpdate', { detail: updated }));
+        } catch (e) {
+          alert("Storage limit reached! Please try using a smaller image or delete older portfolios manually.");
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const clearStorage = () => {
+    if (window.confirm("FATAL: This will permanently delete all your portfolios and albums to free up storage space. Proceed?")) {
+      localStorage.removeItem('vendorProjects');
+      localStorage.removeItem('vendorPreviewData');
+      alert("Storage cleared successfully. The page will now reload.");
+      window.location.href = '/vendor/dashboard';
+    }
+  };
+
+  return (
+    <VendorLayout title="Settings">
+      <div className="max-w-3xl mx-auto space-y-8 animate-wedding-fade-up">
+        
+        {/* Profile Stats Overview */}
+         <div className="flex flex-col sm:flex-row items-center gap-4 md:gap-6 p-5 md:p-8 bg-white/60 backdrop-blur rounded-[1.5rem] md:rounded-[2.5rem] border border-[#F3E9E2] shadow-sm">
+            <div className="relative group shrink-0">
+              <div className="w-24 h-24 rounded-[2.2rem] overflow-hidden border-4 border-white shadow-xl bg-white flex items-center justify-center p-0.5">
+                 <img 
+                    src={settings.avatar} 
+                    alt="Vendor" 
+                    className="w-full h-full object-cover rounded-[1.8rem] transition-transform duration-700 group-hover:scale-[1.1]" 
+                 />
+                 <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent rounded-[1.8rem] transition-all" />
+              </div>
+            </div>
+
+            <div className="text-center sm:text-left space-y-1">
+               <h3 className="text-2xl font-black text-[#4A3730]">{settings.name}</h3>
+               <p className="text-[11px] font-bold text-[#8E7E77] uppercase tracking-widest leading-none">
+                  {settings.category} • {settings.location}
+               </p>
+               <div className="flex items-center gap-1.5 text-emerald-500 font-black text-[10px] mt-2 justify-center sm:justify-start">
+                  <ShieldCheck className="w-3.5 h-3.5" /> VERIFIED ACCOUNT • SECURED
+               </div>
+            </div>
+            <input type="file" ref={avatarInputRef} className="hidden" accept="image/*" onChange={handleAvatarUpload} />
+            <div className="sm:ml-auto flex flex-col gap-2">
+               <button 
+                 onClick={() => avatarInputRef.current?.click()}
+                 className="px-5 py-2.5 rounded-xl bg-[#B06A6C]/10 text-[#B06A6C] font-black text-[9px] uppercase tracking-widest hover:bg-[#B06A6C] hover:text-white transition-all shadow-inner"
+               >
+                  Change Photo
+               </button>
+               <button 
+                 onClick={() => navigate('/vendor/profile', { state: { tab: 'Profile' } })}
+                 className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black text-[9px] uppercase tracking-widest hover:bg-black transition-all shadow-xl"
+               >
+                  Edit Identity
+               </button>
+            </div>
+
+         </div>
+
+        {/* Settings Sections */}
+        <div className="space-y-6">
+           {/* Section: Notifications */}
+           <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-[#F3E9E2] overflow-hidden shadow-sm">
+              <div className="p-5 md:p-8 border-b border-[#F3E9E2] flex items-center gap-3">
+                 <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-400 flex items-center justify-center">
+                    <Bell className="w-5 h-5 transition-transform group-hover:scale-110" />
+                 </div>
+                 <h4 className="text-base md:text-lg font-black text-[#4A3730] " >Notifications</h4>
+              </div>
+              <div className="p-5 md:p-8 space-y-4 md:space-y-6">
+                 {[
+                   { id: 'leads', title: "New Lead Alerts", desc: "Receive real-time push notifications for user enquiries.", icon: MessageSquare },
+                   { id: 'whatsapp', title: "WhatsApp Updates", desc: "Get notification links on your business WhatsApp.", icon: Globe },
+                 ].map((item, i) => (
+                   <div key={i} className="flex items-center justify-between group">
+                      <div className="flex items-center gap-5">
+                         <div className={`w-5 h-5 rounded-md border-2 border-[#B06A6C] flex items-center justify-center transition-all ${settings.notifications[item.id] ? 'bg-[#B06A6C] text-white' : 'bg-transparent text-transparent'}`}>
+                            <CheckCircle2 className="w-4 h-4" />
+                         </div>
+                         <div className="space-y-0.5">
+                            <p className="text-sm font-black text-[#4A3730]">{item.title}</p>
+                            <p className="text-[11px] text-[#8E7E77] font-medium">{item.desc}</p>
+                         </div>
+                      </div>
+                      <div 
+                        onClick={() => toggleNotification(item.id)}
+                        className={`w-10 h-6 rounded-full relative shadow-inner cursor-pointer transition-all duration-300 ${settings.notifications[item.id] ? 'bg-[#B06A6C]' : 'bg-slate-200'}`}
+                      >
+                         <div className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow-sm transition-all duration-300 ${settings.notifications[item.id] ? 'right-1' : 'left-1'}`} />
+                      </div>
+                   </div>
+                 ))}
+              </div>
+           </div>
+
+            {/* Section: Storage Management (EMERGENCY) */}
+            <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-[#F3E9E2] overflow-hidden shadow-sm">
+               <div className="p-5 md:p-8 border-b border-[#F3E9E2] flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center">
+                     <Database className="w-5 h-5" />
+                  </div>
+                  <h4 className="text-base md:text-lg font-black text-[#4A3730] " >Storage Management</h4>
+               </div>
+               <div className="p-5 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
+                  <div className="space-y-1">
+                     <p className="text-sm font-black text-[#4A3730]">Factory Reset Dashboard</p>
+                     <p className="text-[11px] text-[#8E7E77] font-medium max-w-sm">Clears all locally saved portfolios, albums, and settings. Fixes "Storage Full" errors.</p>
+                  </div>
+                  <button 
+                    onClick={clearStorage}
+                    className="px-6 py-3.5 rounded-2xl bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-rose-600 transition-all shadow-xl shadow-rose-200"
+                  >
+                     <RefreshCcw className="w-4 h-4" /> Reset Everything
+                  </button>
+               </div>
+            </div>
+
+            {/* Section: Security */}
+            <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-[#F3E9E2] overflow-hidden shadow-sm">
+               <div className="p-5 md:p-8 border-b border-[#F3E9E2] flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-500 flex items-center justify-center">
+                     <Lock className="w-5 h-5 transition-transform group-hover:scale-110" />
+                  </div>
+                  <h4 className="text-base md:text-lg font-black text-[#4A3730] " >Security</h4>
+               </div>
+               <div className="p-5 md:p-8 space-y-4 md:space-y-6">
+                  <div className="space-y-2">
+                     <label className="text-[10px] font-black text-[#8E7E77] uppercase tracking-widest ml-1">Update Password</label>
+                     <div className="relative group">
+                        <input 
+                           type={showPassword ? "text" : "password"} 
+                           placeholder="Enter new secure password"
+                           className="w-full bg-[#F3E9E2]/30 border border-[#F3E9E2] rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 outline-none focus:border-[#B06A6C] transition-all"
+                        />
+                        <button 
+                           onClick={() => setShowPassword(!showPassword)}
+                           className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-300 hover:text-primary transition-colors p-1"
+                        >
+                           {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                     </div>
+                  </div>
+
+                  <button className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all">
+                     Update Password
+                  </button>
+               </div>
+            </div>
+
+
+
+
+
+           {/* Bottom Actions */}
+           <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
+              <button className="w-full sm:flex-1 py-4 bg-[#B06A6C] text-white font-black text-sm rounded-2xl shadow-xl shadow-[#B06A6C]/20 hover:scale-[1.02] active:scale-95 transition-all">
+                 Save Settings
+              </button>
+              <button className="w-full sm:flex-1 py-4 bg-rose-50 text-rose-500 font-black text-sm rounded-2xl flex items-center justify-center gap-2 hover:bg-rose-100 hover:text-rose-600 active:scale-95 transition-all">
+                 <LogOut className="w-5 h-5" /> Logout
+              </button>
+           </div>
+        </div>
+
+        <div className="py-10 text-center">
+           <p className="text-[10px] font-black text-slate-200 uppercase tracking-widest  " >
+             Destine Vendor v1.0.4 • Powered by Anti-Gravity
+           </p>
+        </div>
+      </div>
+    </VendorLayout>
+  );
+};
+
+export default VendorSettings;

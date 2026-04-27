@@ -1,0 +1,367 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-background: #FFFFFF;
+  /* Original Pure White */
+  --color-surface: #39593f;
+  /* Original Botanical Green */
+  --color-accent: hsl(353, 45%, 35%);
+  /* Wedding Maroon (Accent) */
+  --color-accent-soft: hsl(353, 45%, 96%);
+  /* Very light pink/rose for hover */
+  --color-textLight: #E8F3E8;
+  --color-textDark: #1a261a;
+  /* Original Dark Green for text */
+  --color-honey: #F59E0B;
+  --color-cardWhite: #FFFFFF;
+
+  --font-sans: "Poppins", sans-serif;
+
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+
+  /* Hotel Partner Theme - Botanical Nature Theme */
+  --color-partner-primary: #769776;
+  --color-partner-secondary: #769776;
+  --color-partner-accent: #A3B18A;
+  --color-partner-bg-light: #F8F9F5;
+  --color-partner-text: #344E41;
+  --color-partner-border: #DAD7CD;
+
+  /* Scoped Hotel Theme Colors (Vibrant Light Botanical Mix) */
+  --color-hotel-bg: #f5fcf5;
+  --color-hotel-bg-grad: linear-gradient(180deg, #f5fcf5 0%, #ffffff 100%);
+  --color-hotel-surface: #5F8575;
+  --color-hotel-text-light: #F4F9F4;
+  --color-hotel-text-dark: #2D3A2D;
+
+  /* Fallbacks for Wedding module */
+  --color-border: hsl(353, 20%, 88%);
+  --color-primary: hsl(353, 45%, 35%);
+  --color-secondary: hsl(353, 30%, 94%);
+  --color-muted: hsl(353, 20%, 95%);
+  --color-foreground: hsl(353, 20%, 15%);
+  --color-popover: #FFFFFF;
+  --color-popover-foreground: hsl(353, 20%, 15%);
+  --color-wedding-rose: #C17A7C;
+
+  /* HSL Variable Fallbacks for legacy components */
+  --primary: 353 45% 35%;
+  --secondary: 353 30% 94%;
+  --accent: 353 45% 35%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 353 20% 15%;
+  --wedding-rose: 353 37% 62%;
+  --border: 353 20% 88%;
+}
+
+.rounded-curvy {
+  border-top-left-radius: 3.5rem;
+  border-top-right-radius: 3.5rem;
+}
+
+.glass-card {
+  @apply bg-white/80 backdrop-blur-xl border border-white/20;
+}
+
+.hotel-module {
+  --color-background: var(--color-hotel-bg);
+  --color-surface: var(--color-hotel-surface);
+  --color-textLight: var(--color-hotel-text-light);
+  --color-textDark: var(--color-hotel-text-dark);
+  background: var(--color-hotel-bg-grad) !important;
+  background-attachment: fixed !important;
+}
+
+@layer base {
+  body {
+    @apply bg-[var(--color-background)] text-[var(--color-textDark)] font-sans min-h-screen selection:bg-green-100;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+    overflow-x: hidden;
+    width: 100%;
+    position: relative;
+  }
+
+  /* Prevent zoom on focus for iOS by ensuring font-size is at least 16px */
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* COMPATIBILITY: Force dark background for Hotel Module to match white text */
+/* Hotel Partner Module Reset */
+body:has(#hotel-root) {
+  background-color: var(--color-partner-bg);
+  color: var(--color-partner-text-primary);
+}
+
+.text-muted {
+  @apply text-slate-400;
+}
+
+.wedding-sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(353, 45%, 35%, 0.2) transparent;
+  overscroll-behavior: contain;
+}
+
+.wedding-sidebar-scrollbar::-webkit-scrollbar {
+  width: 4px;
+}
+
+.wedding-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.wedding-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: hsl(353, 45%, 35%, 0.1);
+  border-radius: 20px;
+}
+
+.wedding-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: hsl(353, 45%, 35%, 0.3);
+}
+
+.input {
+  @apply w-full px-4 py-3 rounded-xl border-2 border-gray-400 outline-none transition-all placeholder:text-gray-400 focus:border-[var(--color-surface)] focus:ring-4 focus:ring-[var(--color-surface)]/10 bg-white text-[var(--color-textDark)] font-medium shadow-sm hover:border-gray-500;
+}
+
+@media print {
+
+  /* Hide Navbar and specific buttons during print */
+  nav,
+  .navbar,
+  footer,
+  .bottom-nav,
+  button[class*="print:hidden"],
+  [aria-label="Bottom Navigation"] {
+    display: none !important;
+  }
+}
+
+/* WEDDING RAW CSS */
+@layer base {
+  :root {
+    --background: 353 60% 98%;
+    --foreground: 353 20% 15%;
+
+    --card: 353 60% 99%;
+    --card-foreground: 353 20% 15%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 353 20% 15%;
+
+    --primary: 353 45% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 353 30% 94%;
+    --secondary-foreground: 353 45% 25%;
+
+    --muted: 353 20% 95%;
+    --muted-foreground: 353 15% 45%;
+
+    --accent: 353 30% 94%;
+    --accent-foreground: 353 45% 35%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 353 20% 88%;
+    --input: 353 20% 88%;
+    --ring: 353 45% 35%;
+
+    --radius: 1rem;
+
+    --wedding-gold: 353 45% 35%;
+    --wedding-rose: 353 30% 45%;
+    --wedding-cream: 0 0% 100%;
+    --wedding-espresso: 353 40% 15%;
+    --wedding-blush: 353 30% 94%;
+    --wedding-sage: 353 15% 70%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 353 40% 5%;
+    --foreground: 0 0% 95%;
+
+    --card: 353 35% 8%;
+    --card-foreground: 0 0% 95%;
+
+    --popover: 353 35% 8%;
+    --popover-foreground: 0 0% 95%;
+
+    --primary: 353 45% 35%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 353 30% 18%;
+    --secondary-foreground: 353 30% 75%;
+
+    --muted: 353 20% 15%;
+    --muted-foreground: 353 15% 65%;
+
+    --accent: 353 30% 20%;
+    --accent-foreground: 0 0% 95%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 353 30% 18%;
+    --input: 353 30% 18%;
+    --ring: 353 45% 35%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  body:has(.wedding-module) {
+    background: linear-gradient(180deg, #FFFFFF 0%, #FFF0F3 100%);
+    background-attachment: fixed;
+    color: hsl(var(--foreground));
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Inter', sans-serif;
+  }
+}
+
+@layer components {
+  .wedding-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--wedding-rose)));
+    background-size: 200% auto;
+  }
+
+  .wedding-gradient-soft {
+    background: linear-gradient(135deg, hsl(0 0% 100%) 0%, hsl(353 30% 94%) 50%, hsl(0 0% 100%) 100%);
+  }
+
+  .wedding-text-gradient {
+    background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--wedding-rose)));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .wedding-shadow {
+    box-shadow: 0 10px 40px -10px hsl(var(--primary) / 0.3), 0 0 15px hsl(var(--primary) / 0.1);
+  }
+
+  .wedding-shadow-hover {
+    box-shadow: 0 20px 60px -10px hsl(var(--primary) / 0.4), 0 0 25px hsl(var(--primary) / 0.2);
+  }
+}
+
+@layer utilities {
+  @keyframes wedding-fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(30px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes wedding-fade-in {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes wedding-scale-in {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes wedding-slide-right {
+    from {
+      opacity: 0;
+      transform: translateX(-30px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes wedding-draw-line {
+    from {
+      width: 0;
+    }
+
+    to {
+      width: 100%;
+    }
+  }
+
+  .animate-wedding-fade-up {
+    animation: wedding-fade-up 0.8s ease-out forwards;
+  }
+
+  .animate-wedding-fade-in {
+    animation: wedding-fade-in 0.6s ease-out forwards;
+  }
+
+  .animate-wedding-scale-in {
+    animation: wedding-scale-in 0.5s ease-out forwards;
+  }
+
+  .animate-wedding-slide-right {
+    animation: wedding-slide-right 0.6s ease-out forwards;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none !important;
+    scrollbar-width: none !important;
+  }
+}

@@ -106,28 +106,20 @@ const LandingPage = () => {
             <span className="text-sm font-bold text-gray-800 leading-tight">Travel without<br/>hassle</span>
           </div>
           <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 flex items-center justify-center text-emerald-700">
-              <div className="flex flex-col items-center">
-                 <div className="flex gap-1 mb-1">
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                    <Star size={12} fill="currentColor" />
-                 </div>
-                 <Star size={36} strokeWidth={1.2} />
-              </div>
+            <div className="w-16 h-16 flex items-center justify-center">
+              <img src="https://cdn-icons-gif.flaticon.com/17093/17093492.gif" alt="Reviews Icon" className="w-12 h-12 object-contain" />
             </div>
-            <span className="text-sm font-bold text-gray-800 leading-tight">Millions of<br/>view</span>
+            <span className="text-sm font-bold text-gray-800 leading-tight">Millions of<br/>reviews</span>
           </div>
           <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 flex items-center justify-center text-emerald-700">
-              <HandCoins size={48} strokeWidth={1.2} />
+            <div className="w-16 h-16 flex items-center justify-center">
+              <img src="https://cdn-icons-gif.flaticon.com/19028/19028843.gif" alt="Budget Icon" className="w-12 h-12 object-contain" />
             </div>
             <span className="text-sm font-bold text-gray-800 leading-tight">Perfect for your<br/>budget</span>
           </div>
           <div className="flex flex-col items-center gap-3">
-            <div className="w-16 h-16 flex items-center justify-center text-emerald-700">
-              <Briefcase size={48} strokeWidth={1.2} />
+            <div className="w-16 h-16 flex items-center justify-center">
+              <img src="https://cdn-icons-gif.flaticon.com/9284/9284550.gif" alt="Travel Tips Icon" className="w-12 h-12 object-contain" />
             </div>
             <span className="text-sm font-bold text-gray-800 leading-tight">Best travel<br/>tips</span>
           </div>
@@ -268,7 +260,7 @@ const LandingPage = () => {
       </section>
 
       {/* 7. Services Section */}
-      <section className="py-20 max-w-6xl mx-auto px-4 text-center">
+      <section className="pt-4 pb-20 max-w-6xl mx-auto px-4 text-center">
         <p className="text-emerald-700 text-sm mb-2 font-medium">We fulfill your needs</p>
         <div className="relative inline-block mb-16">
           <h2 className="text-4xl font-black tracking-widest text-gray-900">SERVICES</h2>
@@ -277,8 +269,8 @@ const LandingPage = () => {
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           <div className="flex flex-col items-center">
-            <div className="text-gray-400 mb-6">
-              <Car size={64} strokeWidth={1} />
+            <div className="w-16 h-16 flex items-center justify-center mb-6">
+              <img src="https://cdn-icons-gif.flaticon.com/15576/15576191.gif" alt="Transport Icon" className="w-16 h-16 object-contain" />
             </div>
             <h4 className="text-lg font-bold text-gray-800 mb-4">Small transport</h4>
             <p className="text-xs text-gray-500 leading-relaxed">
@@ -286,8 +278,8 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="flex flex-col items-center">
-            <div className="text-gray-400 mb-6">
-              <Activity size={64} strokeWidth={1} />
+            <div className="w-16 h-16 flex items-center justify-center mb-6">
+              <img src="https://cdn-icons-gif.flaticon.com/8701/8701055.gif" alt="Events Icon" className="w-16 h-16 object-contain" />
             </div>
             <h4 className="text-lg font-bold text-gray-800 mb-4">Events</h4>
             <p className="text-xs text-gray-500 leading-relaxed">
@@ -295,8 +287,8 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="flex flex-col items-center">
-            <div className="text-gray-400 mb-6">
-              <Briefcase size={64} strokeWidth={1} />
+            <div className="w-16 h-16 flex items-center justify-center mb-6">
+              <img src="https://cdn-icons-gif.flaticon.com/19034/19034819.gif" alt="Vacation Icon" className="w-16 h-16 object-contain" />
             </div>
             <h4 className="text-lg font-bold text-gray-800 mb-4">Vacation package</h4>
             <p className="text-xs text-gray-500 leading-relaxed">
@@ -304,8 +296,8 @@ const LandingPage = () => {
             </p>
           </div>
           <div className="flex flex-col items-center">
-            <div className="text-gray-400 mb-6">
-              <Umbrella size={64} strokeWidth={1} />
+            <div className="w-16 h-16 flex items-center justify-center mb-6">
+              <img src="https://cdn-icons-gif.flaticon.com/19008/19008727.gif" alt="Resorts Icon" className="w-16 h-16 object-contain" />
             </div>
             <h4 className="text-lg font-bold text-gray-800 mb-4">Resorts stay</h4>
             <p className="text-xs text-gray-500 leading-relaxed">

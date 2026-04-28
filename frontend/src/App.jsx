@@ -633,7 +633,6 @@ function App() {
                 PROTECTED USER ROUTES (ENTRY FLOW)
             ────────────────────────────────────── */}
             <Route element={<UserProtectedRoute />}>
-              <Route path="/welcome" element={<WelcomePage />} />
               <Route path="/home" element={<Home />} />
             </Route>
 
@@ -643,6 +642,7 @@ function App() {
                 WebView: require login (same as before)
             ────────────────────────────────────── */}
             <Route element={<PublicOrProtectedRoute />}>
+              <Route path="/welcome" element={<WelcomePage />} />
               <Route path="/hotel/:id" element={<UserPropertyDetailsPage />} />
               <Route path="/hotel/:id/amenities" element={<AmenitiesPage />} />
               <Route path="/hotel/:id/reviews" element={<ReviewsPage />} />

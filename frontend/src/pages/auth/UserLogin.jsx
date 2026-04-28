@@ -150,8 +150,10 @@ const UserLogin = () => {
             } catch (fcmError) {
                 console.warn('[FCM] Could not dispatch register event', fcmError);
             }
-            // Direct redirect to welcome page
-            navigate('/welcome', { replace: true });
+            // Dynamic redirect based on where they came from
+            const redirectTo = location.state?.from?.pathname || '/welcome';
+            const search = location.state?.from?.search || '';
+            navigate(redirectTo + search, { replace: true });
         } catch (err) {
             if (err.isBlocked || err.response?.data?.isBlocked || err.status === 403) {
                 setError(err.message || 'Your account has been blocked by admin. Please contact support.');

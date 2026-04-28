@@ -1,5 +1,5 @@
 import React, { useEffect, useCallback, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 
 // Assets from the wedding module
@@ -42,7 +42,13 @@ const slides = [
 
 const WelcomePage = () => {
   const navigate = useNavigate();
-  const [selectedIndex, setSelectedIndex] = useState(0);
+  const [searchParams] = useSearchParams();
+  const type = searchParams.get('type');
+
+  const [selectedIndex, setSelectedIndex] = useState(() => {
+    if (type === 'wedding') return 1;
+    return 0;
+  });
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
 
@@ -87,11 +93,18 @@ const WelcomePage = () => {
   };
 
   const handleExplore = (slide) => {
-    if (slide.path === null) {
-      // Taxi - coming soon
-      return;
+    const token = localStorage.getItem('token');
+    // Prioritize the slide's own path
+    let targetPath = slide.path;
+
+    if (!targetPath) return; // For "Coming Soon" cases
+
+    if (!token) {
+      // User choice made, now redirect to login
+      navigate('/login', { state: { from: { pathname: targetPath } } });
+    } else {
+      navigate(targetPath);
     }
-    navigate(slide.path);
   };
 
   return (

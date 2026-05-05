@@ -804,6 +804,166 @@ export const handleError = (error) => {
 };
 
 /* --- FAQ SERVICES --- */
+// Wedding Vendor Services
+export const weddingVendorService = {
+  getLeads: async () => {
+    try {
+      const response = await api.get('/wedding/vendor/leads');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  updateLeadStatus: async (id, status) => {
+    try {
+      const response = await api.patch(`/wedding/vendor/leads/${id}/status`, { status });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  getReviews: async () => {
+    try {
+      const response = await api.get('/wedding/vendor/reviews');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  replyToReview: async (id, reply) => {
+    try {
+      const response = await api.patch(`/wedding/vendor/reviews/${id}/reply`, { reply });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  getProfile: async () => {
+    try {
+      const response = await api.get('/wedding/vendor/profile');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  updateProfile: async (data) => {
+    try {
+      const response = await api.post('/wedding/vendor/profile', data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  updatePassword: async (newPassword) => {
+    try {
+      const response = await api.patch('/wedding/vendor/password', { newPassword });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  getPublicVendors: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams(filters).toString();
+      const url = params ? `/wedding/vendors?${params}` : '/wedding/vendors';
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  getPublicVendorDetail: async (id) => {
+    try {
+      const response = await api.get(`/wedding/vendors/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  }
+};
+
+// Wedding Destination Service
+export const weddingDestinationService = {
+  getAll: async () => {
+    try {
+      const response = await api.get('/wedding/destinations');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  getById: async (id) => {
+    try {
+      const response = await api.get(`/wedding/destinations/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  getCategories: async () => {
+    try {
+      const response = await api.get('/wedding/categories');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  }
+};
+
+// Wedding Venue Service
+export const weddingVenueService = {
+  getPublicVenues: async (filters = {}) => {
+    try {
+      const params = new URLSearchParams(filters).toString();
+      const url = params ? `/wedding/venues?${params}` : '/wedding/venues';
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  getPublicVenueDetail: async (id) => {
+    try {
+      const response = await api.get(`/wedding/venues/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  }
+};
+
+// Wedding Review Service (User/Public Side)
+export const weddingReviewService = {
+  getPublicReviews: async (targetId) => {
+    try {
+      const response = await api.get(`/wedding/reviews/${targetId}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  createReview: async (data) => {
+    try {
+      const response = await api.post('/wedding/reviews', data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  }
+};
+
+// Wedding Enquiry Service (User Side)
+export const weddingEnquiryService = {
+  createEnquiry: async (data) => {
+    try {
+      const response = await api.post('/wedding/enquiry', data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  }
+};
+
 export const faqService = {
   // Public - Get active FAQs for an audience
   getFaqs: async (audience) => {

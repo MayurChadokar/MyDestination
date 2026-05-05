@@ -1,4 +1,4 @@
-﻿import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import {
   MapPin,
   Calendar,
@@ -7,35 +7,65 @@ import {
   Users,
   Star,
   Heart,
+  Loader2,
+  Inbox
 } from "lucide-react";
 import ScrollReveal from "../components/ScrollReveal";
 import PlannerCard from "../components/PlannerCard";
 import {
-  destinations,
-  planners,
   formatPrice,
-  saveFavourite,
-  removeFavourite,
-  getFavourites,
 } from "../data/weddingData";
-import { getAllDestinations, getApprovedVenuesByDestination } from "../services/storage";
+import { weddingDestinationService, weddingVenueService, weddingVendorService } from "../../../services/apiService";
 import { useState, useEffect } from "react";
 
 const DestinationDetailPage = () => {
   const { id } = useParams();
   const [dest, setDest] = useState(null);
-  const [favs, setFavs] = useState(getFavourites());
+  const [favs, setFavs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedImg, setSelectedImg] = useState(null);
   const [dynamicVenues, setDynamicVenues] = useState([]);
+  const [planners, setPlanners] = useState([]);
 
   useEffect(() => {
-    const allDests = getAllDestinations();
-    const found = allDests.find((d) => d.id === id);
-    setDest(found);
-    if (found) {
-      setDynamicVenues(getApprovedVenuesByDestination(id));
+    fetchDestinationData();
+    // Initialize favs from localStorage if available
+    const savedFavs = localStorage.getItem("wedding_fav_destinations");
+    if (savedFavs) {
+      try {
+        setFavs(JSON.parse(savedFavs));
+      } catch (e) {
+        setFavs([]);
+      }
     }
   }, [id]);
+
+  const fetchDestinationData = async () => {
+    try {
+      setLoading(true);
+      const [destData, venuesData, plannersData] = await Promise.all([
+        weddingDestinationService.getById(id),
+        weddingVenueService.getPublicVenues({ destinationId: id }),
+        weddingVendorService.getPublicVendors({ destinationId: id, category: 'Planner' })
+      ]);
+      setDest(destData);
+      setDynamicVenues(venuesData);
+      setPlanners(plannersData);
+    } catch (error) {
+      console.error("Failed to fetch destination details", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center gap-4">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-muted-foreground font-medium">Loading Destination Details...</p>
+      </div>
+    );
+  }
 
   if (!dest) {
     return (
@@ -58,16 +88,17 @@ const DestinationDetailPage = () => {
     );
   }
 
-  const destPlanners = planners.filter((p) => dest.plannerIds.includes(p.id));
-  const isFav = favs.includes(dest.id);
+  const isFav = favs.includes(dest._id);
 
   const toggleFav = () => {
+    let newFavs;
     if (isFav) {
-      removeFavourite(dest.id);
+      newFavs = favs.filter(fid => fid !== dest._id);
     } else {
-      saveFavourite(dest.id);
+      newFavs = [...favs, dest._id];
     }
-    setFavs(getFavourites());
+    setFavs(newFavs);
+    localStorage.setItem("wedding_fav_destinations", JSON.stringify(newFavs));
   };
 
   return (
@@ -78,8 +109,6 @@ const DestinationDetailPage = () => {
           src={dest.image}
           alt={dest.name}
           className="w-full h-full object-cover"
-          width={1920}
-          height={1080}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-foreground/70 to-transparent" />
         <div className="absolute bottom-8 left-0 right-0 px-4">
@@ -116,7 +145,7 @@ const DestinationDetailPage = () => {
             {
               icon: Building2,
               label: "Venues",
-              value: `${dest.venueCount || dynamicVenues.length || 5}+ Venues`,
+              value: `${dynamicVenues.length}+ Venues`,
             },
             { icon: Star, label: "Category", value: dest.category || "Heritage" },
           ].map((stat) => (
@@ -153,35 +182,43 @@ const DestinationDetailPage = () => {
               Recommended Venues
             </h2>
           </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {[...dest.venues, ...dynamicVenues].map((venue, i) => (
-              <ScrollReveal key={venue.id} delay={i * 100}>
-                <Link to={`/wedding/vendors/${venue.id}`} className="block h-full group">
-                  <div className="p-6 rounded-2xl bg-card border border-border h-full transition-all duration-300 group-hover:wedding-shadow group-hover:-translate-y-1">
-                    <h3
-                      className="text-xl font-semibold"
-                      style={{ fontFamily: "'Playfair Display', serif" }}
-                    >
-                      {venue.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      {venue.type}
-                    </p>
-                    <div className="mt-4 space-y-2">
-                      <div className="flex items-center gap-2 text-sm text-foreground/80">
-                        <Users className="w-4 h-4 text-primary" /> Up to{" "}
-                        {venue.capacity} guests
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-foreground/80">
-                        <IndianRupee className="w-4 h-4 text-primary" />{" "}
-                        {formatPrice(venue.pricePerDay)}/day
+          
+          {dynamicVenues.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {dynamicVenues.map((venue, i) => (
+                <ScrollReveal key={venue._id} delay={i * 100}>
+                  <Link to={`/wedding/vendors/${venue._id}`} className="block h-full group">
+                    <div className="p-6 rounded-2xl bg-card border border-border h-full transition-all duration-300 group-hover:wedding-shadow group-hover:-translate-y-1">
+                      <h3
+                        className="text-xl font-semibold"
+                        style={{ fontFamily: "'Playfair Display', serif" }}
+                      >
+                        {venue.name}
+                      </h3>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        {venue.type || 'Wedding Venue'}
+                      </p>
+                      <div className="mt-4 space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-foreground/80">
+                          <Users className="w-4 h-4 text-primary" /> Up to{" "}
+                          {venue.capacity || '500'} guests
+                        </div>
+                        <div className="flex items-center gap-2 text-sm text-foreground/80">
+                          <IndianRupee className="w-4 h-4 text-primary" />{" "}
+                          {formatPrice(venue.pricePerDay || 0)}/day
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </Link>
-              </ScrollReveal>
-            ))}
-          </div>
+                  </Link>
+                </ScrollReveal>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white/50 rounded-2xl border border-dashed border-border">
+              <Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground">No venues found for this destination yet.</p>
+            </div>
+          )}
         </div>
       </section>
 
@@ -196,13 +233,21 @@ const DestinationDetailPage = () => {
               Recommended Planners
             </h2>
           </ScrollReveal>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {destPlanners.map((planner, i) => (
-              <ScrollReveal key={planner.id} delay={i * 100}>
-                <PlannerCard planner={planner} />
-              </ScrollReveal>
-            ))}
-          </div>
+          
+          {planners.length > 0 ? (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {planners.map((planner, i) => (
+                <ScrollReveal key={planner._id} delay={i * 100}>
+                  <PlannerCard planner={planner} />
+                </ScrollReveal>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12 bg-white/50 rounded-2xl border border-dashed border-border">
+              <Inbox className="w-12 h-12 text-muted-foreground/30 mx-auto mb-4" />
+              <p className="text-muted-foreground">No planners found for this destination yet.</p>
+            </div>
+          )}
         </div>
       </section>
 

@@ -1,4 +1,5 @@
-﻿import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { 
   Users, 
   MessageSquare, 
@@ -7,17 +8,44 @@ import {
   ChevronRight,
   ArrowUpRight
 } from 'lucide-react';
-import { adminStats, recentEnquiries, pendingVendors } from '../data/adminMockData';
 import { adminStyles } from '../theme/themeConfig';
+import { weddingService } from '../../../../services/weddingService';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
+  const [stats, setStats] = useState([]);
+  const [enquiries, setEnquiries] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const statsData = await weddingService.getAdminStats();
+        const enquiriesData = await weddingService.getAdminEnquiries();
+        setStats(statsData.stats);
+        setEnquiries(enquiriesData);
+      } catch (error) {
+        console.error('Error fetching admin dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[hsl(353,45%,35%)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {adminStats.map((stat, index) => {
+        {stats.map((stat, index) => {
           const Icon = { Users, MessageSquare, TrendingUp, Clock }[stat.icon];
           return (
             <div 
@@ -63,24 +91,26 @@ const AdminDashboard = () => {
                 <tr className="border-b-2 border-white/40">
                   <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Client Name</th>
                   <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Requirement</th>
-                  <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Destination</th>
-                  <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Budget Range</th>
+                  <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Target</th>
+                  <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Budget</th>
                   <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Status</th>
                   <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em] text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/20">
-                {recentEnquiries.map((enq) => (
-                  <tr key={enq.id} className="group hover:bg-white/40 transition-all duration-300">
+                {enquiries.length > 0 ? enquiries.map((enq) => (
+                  <tr key={enq._id} className="group hover:bg-white/40 transition-all duration-300">
                     <td className="py-6 pr-8">
-                      <p className="font-bold text-lg text-[hsl(353,20%,15%)]">{enq.client}</p>
+                      <p className="font-bold text-lg text-[hsl(353,20%,15%)]">{enq.name}</p>
+                      <p className="text-xs text-gray-500">{enq.phone}</p>
                     </td>
                     <td className="py-6">
-                       <p className="text-sm text-gray-600 truncate w-48">{enq.requirement}</p>
+                       <p className="text-sm text-gray-600 truncate w-48">{enq.message}</p>
                     </td>
                     <td className="py-6">
-                      <div className="flex items-center gap-2 text-gray-700">
-                         <span className="text-sm font-medium">{enq.destination}</span>
+                      <div className="flex flex-col text-gray-700">
+                         <span className="text-xs font-bold uppercase">{enq.targetType}</span>
+                         <span className="text-xs text-gray-500">{enq.weddingDate ? new Date(enq.weddingDate).toLocaleDateString() : 'N/A'}</span>
                       </div>
                     </td>
                     <td className="py-6">
@@ -99,7 +129,13 @@ const AdminDashboard = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                )) : (
+                  <tr>
+                    <td colSpan="6" className="py-12 text-center text-gray-500 font-medium">
+                      No enquiries found. Start by generating some leads!
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>

@@ -1,9 +1,43 @@
-﻿import React from 'react';
-import { mockCustomers } from '../data/adminMockData';
+import React, { useState, useEffect } from 'react';
 import { adminStyles } from '../theme/themeConfig';
-import { Search, Mail, Filter, Download, MoreVertical } from 'lucide-react';
+import { Search, Mail, Filter, Download, MoreVertical, User as UserIcon } from 'lucide-react';
+import { weddingService } from '../../../../services/weddingService';
 
 const ManageCustomers = () => {
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = async () => {
+    try {
+      setLoading(true);
+      const data = await weddingService.getAdminCustomers();
+      setCustomers(data);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredCustomers = customers.filter(cust => 
+    cust.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cust.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    cust.phone?.includes(searchTerm)
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[hsl(353,45%,35%)]"></div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col gap-4">
@@ -18,6 +52,8 @@ const ManageCustomers = () => {
                 <input 
                   type="text" 
                   placeholder="Search customers..." 
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 bg-white border border-[#B06A6C]/20 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B06A6C]/20 w-64"
                 />
              </div>
@@ -38,48 +74,46 @@ const ManageCustomers = () => {
                   <tr className="border-b border-[hsl(353,45%,35%)]/10">
                      <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Customer</th>
                      <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Contact Info</th>
-                     <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Bookings</th>
+                     <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Phone</th>
                      <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Join Date</th>
                      <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Status</th>
                      <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em] text-right">Actions</th>
                   </tr>
                </thead>
                <tbody className="divide-y divide-[hsl(353,45%,35%)]/5">
-                  {mockCustomers.map((cust) => (
-                    <tr key={cust.id} className="group hover:bg-white/40 transition-all duration-300">
+                  {filteredCustomers.length > 0 ? filteredCustomers.map((cust) => (
+                    <tr key={cust._id} className="group hover:bg-white/40 transition-all duration-300">
                        <td className="py-6">
                           <div className="flex items-center gap-4">
                              <div className="h-12 w-12 rounded-2xl bg-[hsl(353,45%,35%)]/10 flex items-center justify-center text-[hsl(353,45%,35%)] font-bold text-xl">
-                                {cust.name[0]}
+                                {cust.avatar ? <img src={cust.avatar} alt="" className="h-full w-full rounded-2xl object-cover" /> : (cust.name ? cust.name[0] : <UserIcon />)}
                              </div>
                              <div>
-                                <p className="font-bold text-[hsl(353,20%,15%)]">{cust.name}</p>
-                                <p className="text-xs text-gray-400">{cust.id}</p>
+                                <p className="font-bold text-[hsl(353,20%,15%)]">{cust.name || 'Anonymous'}</p>
+                                <p className="text-xs text-gray-400">{cust._id.substring(0, 8)}...</p>
                              </div>
                           </div>
                        </td>
                        <td className="py-6">
                           <div className="flex flex-col gap-1">
-                             <span className="text-sm text-gray-600 flex items-center gap-2"><Mail size={14} className="text-[#B06A6C]"/> {cust.email}</span>
+                             <span className="text-sm text-gray-600 flex items-center gap-2"><Mail size={14} className="text-[#B06A6C]"/> {cust.email || 'No email'}</span>
                           </div>
                        </td>
                        <td className="py-6">
-                          <div className="flex items-center gap-2">
-                             <span className="px-3 py-1 bg-slate-100 rounded-lg text-xs font-bold text-slate-600">
-                                {cust.bookings} Bookings
-                             </span>
+                          <div className="flex items-center gap-2 text-sm text-gray-600 font-medium">
+                             {cust.phone}
                           </div>
                        </td>
                        <td className="py-6 text-sm text-gray-500 font-medium">
-                          {cust.joinDate}
+                          {new Date(cust.createdAt).toLocaleDateString()}
                        </td>
                        <td className="py-6">
                           <span className={`px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                             cust.status === 'Active' 
+                             !cust.isBlocked 
                                ? 'bg-green-50 text-green-600 border border-green-200' 
-                               : 'bg-slate-50 text-slate-400 border border-slate-200'
+                               : 'bg-red-50 text-red-600 border border-red-200'
                           }`}>
-                             {cust.status}
+                             {cust.isBlocked ? 'Blocked' : 'Active'}
                           </span>
                        </td>
                        <td className="py-6 text-right">
@@ -88,7 +122,13 @@ const ManageCustomers = () => {
                           </button>
                        </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan="6" className="py-12 text-center text-gray-500">
+                        No customers found matching your search.
+                      </td>
+                    </tr>
+                  )}
                </tbody>
             </table>
          </div>

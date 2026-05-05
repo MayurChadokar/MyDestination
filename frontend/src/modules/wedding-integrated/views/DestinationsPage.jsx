@@ -1,12 +1,10 @@
-﻿import { useState, useEffect } from "react";
-import { Search } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, Loader2 } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import DestinationCard from "../components/DestinationCard";
 import ScrollReveal from "../components/ScrollReveal";
-import { getAllDestinations } from "../services/storage";
+import { weddingDestinationService } from "../../../services/apiService";
 import heroImg from "../assets/wedding-hero.jpg";
-
-const categories = ["All", "Beach", "Heritage", "Hill", "Resort"];
 
 const DestinationsPage = () => {
   const [active, setActive] = useState("All");
@@ -14,10 +12,28 @@ const DestinationsPage = () => {
   const [searchParams] = useSearchParams();
   const budgetParam = searchParams.get("budget");
   const [destinations, setDestinations] = useState([]);
+  const [categories, setCategories] = useState(["All"]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setDestinations(getAllDestinations());
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [destData, catData] = await Promise.all([
+        weddingDestinationService.getAll(),
+        weddingDestinationService.getCategories()
+      ]);
+      setDestinations(destData);
+      setCategories(["All", ...catData]);
+    } catch (error) {
+      console.error("Failed to fetch destinations", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const filtered = destinations.filter((d) => {
     const matchCat = active === "All" || d.category === active;
@@ -73,7 +89,7 @@ const DestinationsPage = () => {
       </section>
 
       {/* Filters + Grid */}
-      <section className="py-4 md:py-8 px-3 md:px-4">
+      <section className="py-4 md:py-8 px-3 md:px-4 min-h-[400px]">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-nowrap overflow-x-auto md:flex-wrap md:justify-center gap-2 md:gap-3 mb-5 pb-2 md:pb-0 px-2 scrollbar-none">
             {categories.map((cat) => (
@@ -91,20 +107,29 @@ const DestinationsPage = () => {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filtered.map((dest, i) => (
-              <ScrollReveal key={dest.id} delay={i * 80}>
-                <DestinationCard destination={dest} />
-              </ScrollReveal>
-            ))}
-          </div>
-
-          {filtered.length === 0 && (
-            <div className="text-center py-20 text-muted-foreground">
-              <p className="text-lg">
-                No destinations found matching your search.
-              </p>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-muted-foreground font-medium">Loading Destinations...</p>
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                {filtered.map((dest, i) => (
+                  <ScrollReveal key={dest._id} delay={i * 80}>
+                    <DestinationCard destination={dest} />
+                  </ScrollReveal>
+                ))}
+              </div>
+
+              {filtered.length === 0 && (
+                <div className="text-center py-20 text-muted-foreground">
+                  <p className="text-lg">
+                    No destinations found matching your search.
+                  </p>
+                </div>
+              )}
+            </>
           )}
         </div>
       </section>

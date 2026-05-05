@@ -21,57 +21,94 @@ import {
   ChevronRight
 } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
-
+import { weddingVendorService } from "../../../../../services/apiService";
 import VendorLayout from "../layouts/VendorLayout";
+import toast from "react-hot-toast";
 
 const VendorSettings = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
-  const isVenueManager = user?.category === "Venue Manager";
-
+  const { user, logout } = useAuth();
+  
   const [settings, setSettings] = useState({
-    name: user?.name || "Zoya Khan",
+    name: "",
     avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop",
     notifications: {
       leads: true,
       whatsapp: true
     },
-    category: user?.category || "Photographer",
-    location: user?.location || "Mumbai",
-    experience: user?.experience || "5+ Years"
+    category: "",
+    location: "",
+    experience: ""
   });
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
   const avatarInputRef = React.useRef(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('vendorPreviewData');
-    if (saved) {
-      const data = JSON.parse(saved);
-      setSettings(prev => ({ 
-        ...prev, 
-        name: data.name || prev.name,
-        avatar: data.banner || prev.avatar,
-        category: data.category || prev.category,
-        location: data.location || prev.location
-      }));
-    }
-
-
-    const handleUpdate = (e) => {
-      if (e.detail) {
-        setSettings(prev => ({ 
-          ...prev, 
-          name: e.detail.name || prev.name,
-          avatar: e.detail.banner || prev.avatar
-        }));
-      }
-    };
-
-    window.addEventListener('vendorProfileUpdate', handleUpdate);
-    return () => window.removeEventListener('vendorProfileUpdate', handleUpdate);
+    fetchProfile();
   }, []);
+
+  const fetchProfile = async () => {
+    try {
+      setLoading(true);
+      const response = await weddingVendorService.getProfile();
+      if (response.success) {
+        const v = response.vendor;
+        setSettings({
+          name: v.name || user?.name || "Vendor",
+          avatar: v.avatar || "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=150&auto=format&fit=crop",
+          notifications: {
+            leads: v.notificationSettings?.leads ?? true,
+            whatsapp: v.notificationSettings?.whatsapp ?? true
+          },
+          category: v.category || user?.category || "",
+          location: v.location || "",
+          experience: v.experience ? `${v.experience} Years` : ""
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch profile", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    try {
+      setSaving(true);
+      const payload = {
+        avatar: settings.avatar,
+        notificationSettings: settings.notifications
+      };
+      await weddingVendorService.updateProfile(payload);
+      toast.success("Settings saved successfully!");
+    } catch (error) {
+      toast.error(error.message || "Failed to save settings");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    try {
+      setSaving(true);
+      await weddingVendorService.updatePassword(newPassword);
+      toast.success("Password updated successfully!");
+      setNewPassword("");
+    } catch (error) {
+      toast.error(error.message || "Failed to update password");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const toggleNotification = (key) => {
     setSettings(prev => ({
@@ -86,28 +123,26 @@ const VendorSettings = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setSettings(prev => ({ ...prev, avatar: reader.result }));
-        // Sync with global profile
-        const current = JSON.parse(localStorage.getItem('vendorPreviewData') || '{}');
-        const updated = { ...current, banner: reader.result };
-        try {
-          localStorage.setItem('vendorPreviewData', JSON.stringify(updated));
-          window.dispatchEvent(new CustomEvent('vendorProfileUpdate', { detail: updated }));
-        } catch (e) {
-          alert("Storage limit reached! Please try using a smaller image or delete older portfolios manually.");
-        }
       };
       reader.readAsDataURL(file);
     }
   };
 
-  const clearStorage = () => {
-    if (window.confirm("FATAL: This will permanently delete all your portfolios and albums to free up storage space. Proceed?")) {
-      localStorage.removeItem('vendorProjects');
-      localStorage.removeItem('vendorPreviewData');
-      alert("Storage cleared successfully. The page will now reload.");
-      window.location.href = '/vendor/dashboard';
-    }
+  const handleLogout = () => {
+    logout();
+    navigate('/wedding/vendor/login');
   };
+
+  if (loading) {
+    return (
+      <VendorLayout title="Settings">
+        <div className="flex flex-col items-center justify-center py-20 gap-3">
+           <div className="w-8 h-8 border-4 border-[#B06A6C] border-t-transparent rounded-full animate-spin" />
+           <p className="text-[10px] font-bold text-[#8E7E77] uppercase tracking-widest">Loading Settings...</p>
+        </div>
+      </VendorLayout>
+    );
+  }
 
   return (
     <VendorLayout title="Settings">
@@ -144,10 +179,10 @@ const VendorSettings = () => {
                   Change Photo
                </button>
                <button 
-                 onClick={() => navigate('/vendor/profile', { state: { tab: 'Profile' } })}
+                 onClick={() => navigate('/wedding/vendor/work')}
                  className="px-5 py-2.5 rounded-xl bg-slate-900 text-white font-black text-[9px] uppercase tracking-widest hover:bg-black transition-all shadow-xl"
                >
-                  Edit Identity
+                  Edit Portfolio
                </button>
             </div>
 
@@ -189,28 +224,6 @@ const VendorSettings = () => {
               </div>
            </div>
 
-            {/* Section: Storage Management (EMERGENCY) */}
-            <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-[#F3E9E2] overflow-hidden shadow-sm">
-               <div className="p-5 md:p-8 border-b border-[#F3E9E2] flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-500 flex items-center justify-center">
-                     <Database className="w-5 h-5" />
-                  </div>
-                  <h4 className="text-base md:text-lg font-black text-[#4A3730] " >Storage Management</h4>
-               </div>
-               <div className="p-5 md:p-8 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-6">
-                  <div className="space-y-1">
-                     <p className="text-sm font-black text-[#4A3730]">Factory Reset Dashboard</p>
-                     <p className="text-[11px] text-[#8E7E77] font-medium max-w-sm">Clears all locally saved portfolios, albums, and settings. Fixes "Storage Full" errors.</p>
-                  </div>
-                  <button 
-                    onClick={clearStorage}
-                    className="px-6 py-3.5 rounded-2xl bg-rose-500 text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 hover:bg-rose-600 transition-all shadow-xl shadow-rose-200"
-                  >
-                     <RefreshCcw className="w-4 h-4" /> Reset Everything
-                  </button>
-               </div>
-            </div>
-
             {/* Section: Security */}
             <div className="bg-white rounded-[1.5rem] md:rounded-[2.5rem] border border-[#F3E9E2] overflow-hidden shadow-sm">
                <div className="p-5 md:p-8 border-b border-[#F3E9E2] flex items-center gap-3">
@@ -227,6 +240,8 @@ const VendorSettings = () => {
                            type={showPassword ? "text" : "password"} 
                            placeholder="Enter new secure password"
                            className="w-full bg-[#F3E9E2]/30 border border-[#F3E9E2] rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 outline-none focus:border-[#B06A6C] transition-all"
+                           value={newPassword}
+                           onChange={(e) => setNewPassword(e.target.value)}
                         />
                         <button 
                            onClick={() => setShowPassword(!showPassword)}
@@ -237,22 +252,28 @@ const VendorSettings = () => {
                      </div>
                   </div>
 
-                  <button className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all">
+                  <button 
+                    onClick={handleUpdatePassword}
+                    className="px-6 py-3 rounded-xl bg-slate-100 text-slate-600 font-black text-[9px] uppercase tracking-widest hover:bg-slate-200 transition-all"
+                  >
                      Update Password
                   </button>
                </div>
             </div>
 
-
-
-
-
            {/* Bottom Actions */}
            <div className="flex flex-col sm:flex-row items-center gap-4 pt-4">
-              <button className="w-full sm:flex-1 py-4 bg-[#B06A6C] text-white font-black text-sm rounded-2xl shadow-xl shadow-[#B06A6C]/20 hover:scale-[1.02] active:scale-95 transition-all">
-                 Save Settings
+              <button 
+                onClick={handleSaveSettings}
+                disabled={saving}
+                className={`w-full sm:flex-1 py-4 bg-[#B06A6C] text-white font-black text-sm rounded-2xl shadow-xl shadow-[#B06A6C]/20 transition-all ${saving ? 'opacity-50 cursor-not-allowed' : 'hover:scale-[1.02] active:scale-95'}`}
+              >
+                 {saving ? "Saving..." : "Save Settings"}
               </button>
-              <button className="w-full sm:flex-1 py-4 bg-rose-50 text-rose-500 font-black text-sm rounded-2xl flex items-center justify-center gap-2 hover:bg-rose-100 hover:text-rose-600 active:scale-95 transition-all">
+              <button 
+                onClick={handleLogout}
+                className="w-full sm:flex-1 py-4 bg-rose-50 text-rose-500 font-black text-sm rounded-2xl flex items-center justify-center gap-2 hover:bg-rose-100 hover:text-rose-600 active:scale-95 transition-all"
+              >
                  <LogOut className="w-5 h-5" /> Logout
               </button>
            </div>
@@ -260,7 +281,7 @@ const VendorSettings = () => {
 
         <div className="py-10 text-center">
            <p className="text-[10px] font-black text-slate-200 uppercase tracking-widest  " >
-             Destine Vendor v1.0.4 • Powered by Anti-Gravity
+             Destine Vendor v1.1.0 • Powered by Anti-Gravity
            </p>
         </div>
       </div>

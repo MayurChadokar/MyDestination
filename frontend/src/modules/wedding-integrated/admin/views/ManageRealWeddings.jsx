@@ -1,13 +1,7 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { 
-  getAllDestinations, 
-  getAdminRealWeddings, 
-  saveAdminRealWedding, 
-  updateAdminRealWedding, 
-  deleteAdminRealWedding 
-} from '../../services/storage';
 import { adminStyles } from '../theme/themeConfig';
+import { weddingService } from '../../../../services/weddingService';
 import { 
   Plus, 
   Trash2, 
@@ -16,13 +10,10 @@ import {
   Users,
   Camera,
   Heart,
-  Search,
   PlusCircle,
   X,
   Upload,
   Trash,
-  IndianRupee,
-  Calendar,
   Pencil,
   ChevronDown
 } from 'lucide-react';
@@ -32,10 +23,11 @@ const ManageRealWeddings = () => {
   const [destinations, setDestinations] = useState([]);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showDestDropdown, setShowDestDropdown] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [editingWedding, setEditingWedding] = useState(null);
   const [newWedding, setNewWedding] = useState({
     coupleName: '',
-    location: '',
+    locationName: '',
     destinationId: '',
     guests: '',
     budgetMin: '',
@@ -45,9 +37,24 @@ const ManageRealWeddings = () => {
   });
 
   useEffect(() => {
-    setWeddings(getAdminRealWeddings());
-    setDestinations(getAllDestinations());
+    fetchData();
   }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [weddingsData, destsData] = await Promise.all([
+        weddingService.getRealWeddings(),
+        weddingService.getDestinations()
+      ]);
+      setWeddings(weddingsData);
+      setDestinations(destsData);
+    } catch (error) {
+      console.error('Error fetching real weddings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleImageChange = (e, field) => {
     const file = e.target.files[0];
@@ -69,46 +76,30 @@ const ManageRealWeddings = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (!newWedding.coupleName || !newWedding.destinationId || !newWedding.coverImage) {
       alert("Please fill in required fields (Couple Name, Destination, Cover Image)");
       return;
     }
 
-    const selectedDest = destinations.find(d => d.id === newWedding.destinationId);
-    const weddingData = {
-      ...newWedding,
-      location: selectedDest?.name || newWedding.location,
-      guests: Number(newWedding.guests)
-    };
-    
-    if (editingWedding) {
-      updateAdminRealWedding({
-        ...weddingData,
-        id: editingWedding.id
-      });
-    } else {
-      saveAdminRealWedding(weddingData);
+    try {
+      setLoading(true);
+      const selectedDest = destinations.find(d => d._id === newWedding.destinationId);
+      const weddingData = {
+        ...newWedding,
+        locationName: selectedDest?.name || newWedding.locationName,
+      };
+      
+      await weddingService.addRealWedding(weddingData);
+      setShowAddForm(false);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      alert('Failed to save wedding story');
+    } finally {
+      setLoading(false);
     }
-    
-    setWeddings(getAdminRealWeddings());
-    resetForm();
-  };
-
-  const handleEdit = (wedding) => {
-    setEditingWedding(wedding);
-    setNewWedding({
-      coupleName: wedding.coupleName,
-      location: wedding.location,
-      destinationId: wedding.destinationId,
-      guests: wedding.guests,
-      budgetMin: wedding.budgetMin,
-      budgetMax: wedding.budgetMax,
-      coverImage: wedding.coverImage,
-      photos: wedding.photos || []
-    });
-    setShowAddForm(true);
   };
 
   const resetForm = () => {
@@ -116,7 +107,7 @@ const ManageRealWeddings = () => {
     setEditingWedding(null);
     setNewWedding({
       coupleName: '',
-      location: '',
+      locationName: '',
       destinationId: '',
       guests: '',
       budgetMin: '',
@@ -131,12 +122,26 @@ const ManageRealWeddings = () => {
     setShowAddForm(true);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this wedding story?")) {
-      deleteAdminRealWedding(id);
-      setWeddings(getAdminRealWeddings());
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this wedding story?")) return;
+    try {
+      setLoading(true);
+      await weddingService.deleteRealWedding(id);
+      fetchData();
+    } catch (error) {
+      alert('Failed to delete wedding story');
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading && weddings.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[hsl(353,45%,35%)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -157,7 +162,7 @@ const ManageRealWeddings = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
          {weddings.map((wedding) => (
-           <div key={wedding.id} className={`${adminStyles.glassCard} p-6 rounded-[2rem] group relative overflow-hidden h-80`}>
+            <div key={wedding._id} className={`${adminStyles.glassCard} p-6 rounded-[2rem] group relative overflow-hidden h-80`}>
               <img 
                 src={wedding.coverImage} 
                 className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-opacity duration-700" 
@@ -166,17 +171,11 @@ const ManageRealWeddings = () => {
               <div className="relative z-10 flex flex-col h-full">
                  <div className="flex justify-between items-start mb-auto">
                     <span className="px-4 py-1.5 bg-[hsl(353,45%,35%)] text-white rounded-full text-[10px] font-black uppercase tracking-widest leading-none">
-                       {wedding.location}
+                       {wedding.locationName || wedding.destination?.name}
                     </span>
                     <div className="flex gap-2">
                        <button 
-                         onClick={() => handleEdit(wedding)}
-                         className="p-2.5 bg-blue-50 text-blue-500 rounded-xl hover:bg-blue-500 hover:text-white transition-all shadow-sm"
-                       >
-                          <Pencil size={16} />
-                       </button>
-                       <button 
-                         onClick={() => handleDelete(wedding.id)}
+                         onClick={() => handleDelete(wedding._id)}
                          className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
                        >
                           <Trash2 size={16} />
@@ -193,7 +192,7 @@ const ManageRealWeddings = () => {
                     <div className="mt-4 pt-4 border-t border-[hsl(353,45%,35%)]/10 flex justify-between items-center">
                        <div>
                           <p className="text-[10px] text-gray-500 font-black uppercase tracking-widest mb-1">Budget Range</p>
-                          <p className="text-sm font-black text-slate-800">{wedding.budgetMin} â€” {wedding.budgetMax}</p>
+                          <p className="text-sm font-black text-slate-800">{wedding.budgetMin} — {wedding.budgetMax}</p>
                        </div>
                        <span className="text-[10px] font-black text-[#B06A6C] uppercase tracking-widest flex items-center gap-1 bg-[#B06A6C]/10 px-3 py-1 rounded-full">
                           {wedding.photos?.length || 0} PHOTOS
@@ -201,14 +200,14 @@ const ManageRealWeddings = () => {
                     </div>
                  </div>
               </div>
-           </div>
+            </div>
          ))}
          
          {weddings.length === 0 && (
-           <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-[#B06A6C]/20 rounded-[2.5rem] bg-white/30 backdrop-blur-sm">
-              <PlusCircle size={48} className="text-[#B06A6C]/20 mb-4" />
-              <p className="text-gray-400 font-medium">No real weddings added yet.</p>
-           </div>
+            <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-[#B06A6C]/20 rounded-[2.5rem] bg-white/30 backdrop-blur-sm">
+               <PlusCircle size={48} className="text-[#B06A6C]/20 mb-4" />
+               <p className="text-gray-400 font-medium">No real weddings added yet.</p>
+            </div>
          )}
       </div>
 
@@ -250,7 +249,7 @@ const ManageRealWeddings = () => {
                          className="w-full px-5 py-3 bg-white border border-[#B06A6C]/20 rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#B06A6C]/20 cursor-pointer flex justify-between items-center"
                        >
                           <span className={newWedding.destinationId ? "text-black" : "text-gray-400"}>
-                            {newWedding.destinationId ? destinations.find(d => d.id === newWedding.destinationId)?.name || 'Select Destination' : 'Select Destination'}
+                            {newWedding.destinationId ? destinations.find(d => d._id === newWedding.destinationId)?.name || 'Select Destination' : 'Select Destination'}
                           </span>
                           <ChevronDown size={16} className={`text-gray-400 transition-transform ${showDestDropdown ? 'rotate-180' : ''}`} />
                        </div>
@@ -261,13 +260,13 @@ const ManageRealWeddings = () => {
                                className="px-5 py-3 hover:bg-[#B06A6C]/5 cursor-pointer text-sm text-gray-500 transition-colors"
                                onClick={() => { setNewWedding({...newWedding, destinationId: ""}); setShowDestDropdown(false); }}
                             >
-                               Select Destination
+                                Select Destination
                             </div>
                             {destinations.map(d => (
                                <div 
-                                 key={d.id} 
-                                 className={`px-5 py-3 cursor-pointer text-sm transition-colors ${newWedding.destinationId === d.id ? 'bg-[#B06A6C]/10 text-[#B06A6C] font-bold' : 'hover:bg-[#B06A6C]/5 text-gray-700'}`}
-                                 onClick={() => { setNewWedding({...newWedding, destinationId: d.id}); setShowDestDropdown(false); }}
+                                 key={d._id} 
+                                 className={`px-5 py-3 cursor-pointer text-sm transition-colors ${newWedding.destinationId === d._id ? 'bg-[#B06A6C]/10 text-[#B06A6C] font-bold' : 'hover:bg-[#B06A6C]/5 text-gray-700'}`}
+                                 onClick={() => { setNewWedding({...newWedding, destinationId: d._id}); setShowDestDropdown(false); }}
                                >
                                  {d.name}
                                </div>
@@ -294,7 +293,7 @@ const ManageRealWeddings = () => {
                  <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                          Min Budget
+                           Min Budget
                         </label>
                         <input 
                           required
@@ -306,7 +305,7 @@ const ManageRealWeddings = () => {
                     </div>
                     <div className="space-y-2">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                          Max Budget
+                           Max Budget
                         </label>
                         <input 
                           required
@@ -347,7 +346,7 @@ const ManageRealWeddings = () => {
                             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                                <label htmlFor="wedding-cover-upload" className="p-3 bg-white text-[hsl(353,45%,35%)] rounded-2xl cursor-pointer">
                                   <Upload size={20} />
-                               </label>
+                                </label>
                                <button type="button" onClick={() => setNewWedding({ ...newWedding, coverImage: '' })} className="p-3 bg-white text-red-500 rounded-2xl">
                                   <Trash size={20} />
                                </button>
@@ -388,8 +387,8 @@ const ManageRealWeddings = () => {
                  </div>
 
                  <div className="md:col-span-2 pt-4">
-                    <button type="submit" className="w-full py-4 bg-[hsl(353,45%,35%)] text-white rounded-[2rem] font-bold shadow-xl shadow-[hsl(353,45%,35%)]/20 hover:scale-[1.02] active:scale-95 transition-all">
-                       {editingWedding ? 'Update Wedding Story' : 'Save Wedding Story'}
+                    <button type="submit" disabled={loading} className="w-full py-4 bg-[hsl(353,45%,35%)] text-white rounded-[2rem] font-bold shadow-xl shadow-[hsl(353,45%,35%)]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+                       {loading ? 'Processing...' : (editingWedding ? 'Update Wedding Story' : 'Save Wedding Story')}
                     </button>
                  </div>
               </form>

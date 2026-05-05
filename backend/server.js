@@ -102,23 +102,25 @@ app.use(cors({
 }));
 
 // Routes
-import authRoutes from './routes/authRoutes.js';
-import userRoutes from './routes/userRoutes.js';
-import adminRoutes from './routes/adminRoutes.js';
-import offerRoutes from './routes/offerRoutes.js';
-import walletRoutes from './routes/walletRoutes.js';
-import infoRoutes from './routes/infoRoutes.js';
-import contactRoutes from './routes/contactRoutes.js';
-import propertyRoutes from './routes/propertyRoutes.js';
-import bookingRoutes from './routes/bookingRoutes.js';
-import reviewRoutes from './routes/reviewRoutes.js';
-import paymentRoutes from './routes/paymentRoutes.js';
-import availabilityRoutes from './routes/availabilityRoutes.js';
-import hotelRoutes from './routes/hotelRoutes.js';
-import referralRoutes from './routes/referralRoutes.js';
-import faqRoutes from './routes/faqRoutes.js';
-import partnerRoutes from './routes/partnerRoutes.js';
-import blogRoutes from './routes/blogRoutes.js';
+import authRoutes from './modules/auth/routes/authRoutes.js';
+import userRoutes from './modules/user/routes/userRoutes.js';
+import adminRoutes from './modules/admin/routes/adminRoutes.js';
+import offerRoutes from './modules/marketing/routes/offerRoutes.js';
+import walletRoutes from './modules/user/routes/walletRoutes.js';
+import infoRoutes from './modules/marketing/routes/infoRoutes.js';
+import contactRoutes from './modules/marketing/routes/contactRoutes.js';
+import propertyRoutes from './modules/hotel/routes/propertyRoutes.js';
+import bookingRoutes from './modules/hotel/routes/bookingRoutes.js';
+import reviewRoutes from './modules/hotel/routes/reviewRoutes.js';
+import paymentRoutes from './modules/payment/routes/paymentRoutes.js';
+import availabilityRoutes from './modules/hotel/routes/availabilityRoutes.js';
+import hotelRoutes from './modules/hotel/routes/hotelRoutes.js';
+import referralRoutes from './modules/referral/routes/referralRoutes.js';
+import faqRoutes from './modules/marketing/routes/faqRoutes.js';
+import partnerRoutes from './modules/partner/routes/partnerRoutes.js';
+import blogRoutes from './modules/marketing/routes/blogRoutes.js';
+// import taxiRoutes from './modules/taxi/routes/taxiRoutes.js';
+import weddingRoutes from './modules/wedding/routes/weddingRoutes.js';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -137,6 +139,8 @@ app.use('/api/referrals', referralRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/partners', partnerRoutes);
 app.use('/api/blogs', blogRoutes);
+// app.use('/api/taxi', taxiRoutes);
+app.use('/api/wedding', weddingRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {

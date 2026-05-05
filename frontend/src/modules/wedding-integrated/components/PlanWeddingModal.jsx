@@ -1,10 +1,14 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { X, ChevronDown } from "lucide-react";
+import { weddingEnquiryService } from "../../../services/apiService";
+import toast from "react-hot-toast";
 
-const PlanWeddingModal = ({ isOpen, onClose, initialLocation = "" }) => {
+const PlanWeddingModal = ({ isOpen, onClose, initialLocation = "", targetId, targetType = "General" }) => {
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     fullName: "",
+    email: "",
     phone: "",
     eventMonth: "",
     eventLocation: initialLocation,
@@ -33,10 +37,29 @@ const PlanWeddingModal = ({ isOpen, onClose, initialLocation = "" }) => {
 
   const locations = ["Goa", "Udaipur", "Jaipur", "Kerala", "Jim Corbett", "Rishikesh"];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Form Submitted:", formData);
-    onClose();
+    try {
+      setLoading(true);
+      const payload = {
+        name: formData.fullName,
+        email: formData.email || `${formData.phone}@placeholder.com`, // Email is required in model
+        phone: formData.phone,
+        weddingDate: formData.eventMonth ? new Date(2026, months.indexOf(formData.eventMonth), 1) : null,
+        message: formData.description,
+        targetType,
+        targetId,
+        budget: "Flexible"
+      };
+
+      await weddingEnquiryService.createEnquiry(payload);
+      toast.success("Enquiry sent successfully!");
+      onClose();
+    } catch (error) {
+      toast.error(error.message || "Failed to send enquiry");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return createPortal(
@@ -62,37 +85,44 @@ const PlanWeddingModal = ({ isOpen, onClose, initialLocation = "" }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Name & Phone Grid for Desktop */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
               {/* Full Name */}
               <div>
                 <label className="block text-[10px] md:text-xs font-black mb-1.5 text-slate-400 uppercase tracking-widest">Full Name</label>
                 <input
                   type="text"
                   required
-                  placeholder="Enter your Full Name"
+                  placeholder="Enter Name"
                   className="w-full px-4 py-2.5 rounded-2xl border border-slate-100 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-[#ff7676]/20 focus:border-[#ff7676] transition-all text-sm placeholder:text-slate-400"
                   value={formData.fullName}
                   onChange={(e) => setFormData({...formData, fullName: e.target.value})}
                 />
               </div>
 
+              {/* Email */}
+              <div>
+                <label className="block text-[10px] md:text-xs font-black mb-1.5 text-slate-400 uppercase tracking-widest">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  placeholder="Enter Email"
+                  className="w-full px-4 py-2.5 rounded-2xl border border-slate-100 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-[#ff7676]/20 focus:border-[#ff7676] transition-all text-sm placeholder:text-slate-400"
+                  value={formData.email}
+                  onChange={(e) => setFormData({...formData, email: e.target.value})}
+                />
+              </div>
+
               {/* Phone Number */}
               <div>
                 <label className="block text-[10px] md:text-xs font-black mb-1.5 text-slate-400 uppercase tracking-widest">Phone Number</label>
-                <div className="flex gap-0 overflow-hidden rounded-2xl border border-slate-100 group">
-                  <div className="flex items-center gap-1 px-4 py-2.5 bg-slate-50 text-sm border-r border-slate-100 cursor-pointer hover:bg-slate-100 transition-colors">
-                    <span className="font-bold text-slate-700">+91</span>
-                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                  </div>
-                  <input
-                    type="tel"
-                    required
-                    placeholder="Enter Phone Number"
-                    className="flex-1 px-4 py-2.5 bg-slate-50/50 focus:outline-none transition-all text-sm placeholder:text-slate-400"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                  />
-                </div>
+                <input
+                  type="tel"
+                  required
+                  placeholder="Enter Phone"
+                  className="w-full px-4 py-2.5 rounded-2xl border border-slate-100 bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-[#ff7676]/20 focus:border-[#ff7676] transition-all text-sm placeholder:text-slate-400"
+                  value={formData.phone}
+                  onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                />
               </div>
             </div>
 
@@ -190,9 +220,10 @@ const PlanWeddingModal = ({ isOpen, onClose, initialLocation = "" }) => {
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-2xl bg-[#ff7676] text-white font-black text-sm md:text-base uppercase tracking-widest shadow-xl shadow-red-200 hover:bg-[#ef6666] transition-all transform hover:-translate-y-0.5"
+                disabled={loading}
+                className={`w-full py-3 rounded-2xl bg-[#ff7676] text-white font-black text-sm md:text-base uppercase tracking-widest shadow-xl shadow-red-200 transition-all transform ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-[#ef6666] hover:-translate-y-0.5 active:scale-95'}`}
               >
-                Get a consultation
+                {loading ? "Sending..." : "Get a consultation"}
               </button>
             </div>
           </form>

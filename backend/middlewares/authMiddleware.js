@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
-import Partner from '../models/Partner.js';
-import Admin from '../models/Admin.js';
+import User from '../modules/user/models/User.js';
+import Partner from '../modules/partner/models/Partner.js';
+import Admin from '../modules/admin/models/Admin.js';
 
 export const protect = async (req, res, next) => {
   try {

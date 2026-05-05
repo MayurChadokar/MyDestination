@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Star, MapPin, Heart, Phone, Mail, Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -14,7 +14,7 @@ const VendorCard = ({ vendor, viewMode = "grid" }) => {
   if (viewMode === "list") {
     return (
       <Link
-        to={`/wedding/vendors/${vendor.id}`}
+        to={`/wedding/vendors/${vendor._id}`}
         className="bg-white rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-slate-100 group flex flex-col md:flex-row h-full"
         style={{ textDecoration: "none" }}
       >
@@ -129,7 +129,7 @@ const VendorCard = ({ vendor, viewMode = "grid" }) => {
   // --- Grid View (Reduced Height for Mobile) ---
   return (
     <Link
-      to={`/wedding/vendors/${vendor.id}`}
+      to={`/wedding/vendors/${vendor._id}`}
       className="bg-white rounded-xl overflow-hidden shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] transition-all duration-300 border border-slate-100 group flex flex-col h-full relative"
       style={{ textDecoration: "none" }}
     >

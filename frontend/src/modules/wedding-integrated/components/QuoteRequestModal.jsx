@@ -1,8 +1,10 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { X, Send } from "lucide-react";
-import { saveEnquiry } from "../data/weddingData";
+import { weddingEnquiryService } from "../../../services/apiService";
+import toast from "react-hot-toast";
 
-const QuoteRequestModal = ({ isOpen, onClose, plannerName }) => {
+const QuoteRequestModal = ({ isOpen, onClose, plannerName, targetId, targetType = "Vendor" }) => {
+  const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -13,14 +15,31 @@ const QuoteRequestModal = ({ isOpen, onClose, plannerName }) => {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    saveEnquiry({ ...form, plannerName, type: "quote_request" });
-    setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      onClose();
-    }, 2000);
+    try {
+      setLoading(true);
+      const payload = {
+        name: form.name,
+        email: form.email,
+        phone: form.phone,
+        message: form.message,
+        targetType,
+        targetId,
+        budget: "Flexible"
+      };
+
+      await weddingEnquiryService.createEnquiry(payload);
+      setSubmitted(true);
+      setTimeout(() => {
+        setSubmitted(false);
+        onClose();
+      }, 2000);
+    } catch (error) {
+      toast.error(error.message || "Failed to send request");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (

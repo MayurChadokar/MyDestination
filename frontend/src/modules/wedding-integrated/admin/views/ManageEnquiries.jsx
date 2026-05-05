@@ -1,12 +1,61 @@
-﻿import React, { useState } from 'react';
-import { recentEnquiries } from '../data/adminMockData';
+import React, { useState, useEffect } from 'react';
 import { adminStyles } from '../theme/themeConfig';
-import { Filter, Search, ArrowUpRight, CheckCircle2, Circle } from 'lucide-react';
+import { Filter, Search, ArrowUpRight, CheckCircle2, Circle, Trash2 } from 'lucide-react';
+import { weddingService } from '../../../../services/weddingService';
 
 const ManageEnquiries = () => {
   const [statusFilter, setStatusFilter] = useState('New'); // "New" or "Contacted"
+  const [enquiries, setEnquiries] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredEnquiries = recentEnquiries.filter(enq => enq.status === statusFilter);
+  useEffect(() => {
+    fetchEnquiries();
+  }, [statusFilter]);
+
+  const fetchEnquiries = async () => {
+    try {
+      setLoading(true);
+      const data = await weddingService.getAdminEnquiries({ status: statusFilter });
+      setEnquiries(data);
+    } catch (error) {
+      console.error('Error fetching enquiries:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateStatus = async (id, newStatus) => {
+    try {
+      await weddingService.updateEnquiryStatus(id, newStatus);
+      fetchEnquiries();
+    } catch (error) {
+      alert('Failed to update status');
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('Are you sure you want to delete this enquiry?')) return;
+    try {
+      await weddingService.deleteEnquiry(id);
+      fetchEnquiries();
+    } catch (error) {
+      alert('Failed to delete enquiry');
+    }
+  };
+
+  const filteredEnquiries = enquiries.filter(enq => 
+    enq.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    enq.phone?.includes(searchTerm)
+  );
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[hsl(353,45%,35%)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -22,13 +71,12 @@ const ManageEnquiries = () => {
                 <input 
                     type="text" 
                     placeholder="Search by client name..." 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="h-11 pl-10 pr-4 rounded-xl border border-white/40 bg-white/50 backdrop-blur-md focus:outline-none focus:ring-2 focus:ring-[hsl(353,45%,35%)] transition-all w-64 text-sm"
                 />
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-hover:text-[hsl(353,45%,35%)] transition-colors" size={18} />
              </div>
-             <button className="flex items-center gap-2 px-4 py-2 border border-white/40 bg-white/30 backdrop-blur-md rounded-xl text-sm font-medium hover:bg-white/50 transition-all">
-                <Filter size={16} /> Advanced Filters
-             </button>
           </div>
         </div>
 
@@ -67,8 +115,8 @@ const ManageEnquiries = () => {
             <thead>
               <tr className="border-b-2 border-white/40">
                 <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Client Details</th>
-                <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Requirement</th>
-                <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Destination</th>
+                <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Target</th>
+                <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Date</th>
                 <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Budget</th>
                 <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em]">Status</th>
                 <th className="pb-6 font-bold text-gray-400 text-xs uppercase tracking-[0.1em] text-right">Actions</th>
@@ -77,29 +125,44 @@ const ManageEnquiries = () => {
             <tbody className="divide-y divide-white/20">
               {filteredEnquiries.length > 0 ? (
                 filteredEnquiries.map((enq) => (
-                  <tr key={enq.id} className="group hover:bg-white/40 transition-all duration-300">
+                  <tr key={enq._id} className="group hover:bg-white/40 transition-all duration-300">
                     <td className="py-6 pr-8">
-                      <p className="font-bold text-lg text-[hsl(353,20%,15%)]">{enq.client}</p>
-                      <p className="text-xs text-gray-400 font-medium tracking-wide">ID: {enq.id}</p>
+                      <p className="font-bold text-lg text-[hsl(353,20%,15%)]">{enq.name}</p>
+                      <p className="text-xs text-gray-400 font-medium tracking-wide">{enq.phone}</p>
                     </td>
                     <td className="py-6">
-                      <p className="text-sm text-gray-600 truncate w-56">{enq.requirement}</p>
+                      <p className="text-sm text-gray-600 font-bold uppercase">{enq.targetType}</p>
+                      <p className="text-xs text-gray-400 truncate w-40">{enq.message}</p>
                     </td>
-                    <td className="py-6 text-sm font-medium text-gray-700">{enq.destination}</td>
-                    <td className="py-6">
-                      <p className="text-sm font-bold text-[hsl(353,45%,35%)]">{enq.budget}</p>
+                    <td className="py-6 text-sm font-medium text-gray-700">
+                      {enq.weddingDate ? new Date(enq.weddingDate).toLocaleDateString() : 'TBD'}
                     </td>
                     <td className="py-6">
-                      <span className={`px-4 py-1.5 rounded-full text-xs font-bold shadow-sm ${
-                        enq.status === 'New' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
-                      }`}>
-                        {enq.status.toUpperCase()}
-                      </span>
+                      <p className="text-sm font-bold text-[hsl(353,45%,35%)]">{enq.budget || 'N/A'}</p>
+                    </td>
+                    <td className="py-6">
+                      <select 
+                        value={enq.status}
+                        onChange={(e) => handleUpdateStatus(enq._id, e.target.value)}
+                        className={`px-3 py-1.5 rounded-full text-xs font-bold shadow-sm border-none focus:ring-0 cursor-pointer ${
+                          enq.status === 'New' ? 'bg-blue-100 text-blue-700' : 'bg-green-100 text-green-700'
+                        }`}
+                      >
+                        <option value="New">NEW</option>
+                        <option value="Contacted">CONTACTED</option>
+                        <option value="Booked">BOOKED</option>
+                        <option value="Lost">LOST</option>
+                      </select>
                     </td>
                     <td className="py-6 text-right">
-                      <button className="p-3 bg-[hsl(353,45%,35%)] text-white rounded-2xl shadow-lg shadow-[hsl(353,45%,35%)]/20 hover:scale-110 transition-all duration-300">
-                        <ArrowUpRight size={20} />
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button 
+                          onClick={() => handleDelete(enq._id)}
+                          className="p-3 bg-red-50 text-red-600 rounded-2xl hover:bg-red-600 hover:text-white transition-all duration-300"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

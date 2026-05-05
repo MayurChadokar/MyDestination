@@ -1,78 +1,72 @@
-import { mockVendor } from "./vendorMockData";
-
-const STORAGE_KEY = "vendor_data";
-const DRAFT_KEY = "vendor_onboarding_draft";
-
-// Simulate network delay
-const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+import { api } from "../../../../services/apiService";
 
 /**
- * Create a new vendor profile.
- * Saves to localStorage and clears the onboarding draft.
+ * Create or Update a vendor profile.
  */
 export const createVendor = async (data) => {
-  await delay(1500);
-  const vendor = {
-    ...data,
-    id: `vendor-${Date.now()}`,
-    status: "pending",
-    createdAt: new Date().toISOString(),
-  };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(vendor));
-
   try {
-    const activeSession = JSON.parse(localStorage.getItem('vendor_active_session'));
-    if (activeSession) {
-      const dbRows = JSON.parse(localStorage.getItem('vendor_users_db') || "[]");
-      const userIdx = dbRows.findIndex(u => u.id === activeSession.id);
-
-      if (userIdx !== -1) {
-        const expandedUser = {
-          ...dbRows[userIdx],
-          experience: data.basicInfo?.experience,
-          services: data.services,
-          basicPackage: data.pricing?.basePrice,
-          premiumPackage: data.pricing?.premiumPrice,
-          kycStatus: data.kyc?.aadhar ? "Verified" : "Pending Verification",
-          portfolio: data.portfolio,
-          name: data.basicInfo?.name || dbRows[userIdx].name,
-          category: data.basicInfo?.category || dbRows[userIdx].category,
-          location: data.basicInfo?.location || dbRows[userIdx].location,
-        };
-        dbRows[userIdx] = expandedUser;
-        localStorage.setItem('vendor_users_db', JSON.stringify(dbRows));
-        localStorage.setItem('vendor_active_session', JSON.stringify(expandedUser));
-      }
-    }
-  } catch (e) { }
-
-  localStorage.removeItem(DRAFT_KEY);
-  return { success: true, vendor };
+    const response = await api.post('/wedding/vendor/profile', data);
+    return response.data;
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.message || error.message 
+    };
+  }
 };
 
 /**
- * Get vendor by id.
- * Returns from localStorage if available, otherwise returns mock data.
+ * Get current vendor profile.
  */
-export const getVendor = async (id) => {
-  await delay(800);
-  const stored = localStorage.getItem(STORAGE_KEY);
-  if (stored) {
-    const vendor = JSON.parse(stored);
-    if (!id || vendor.id === id) return { success: true, vendor };
+export const getVendor = async () => {
+  try {
+    const response = await api.get('/wedding/vendor/profile');
+    return response.data;
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.message || error.message 
+    };
   }
-  return { success: true, vendor: { ...mockVendor } };
 };
 
 /**
  * Update an existing vendor profile.
- * Merges partial data into the stored vendor object.
  */
 export const updateVendor = async (id, data) => {
-  await delay(1000);
-  const stored = localStorage.getItem(STORAGE_KEY);
-  const existing = stored ? JSON.parse(stored) : { ...mockVendor };
-  const updated = { ...existing, ...data };
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-  return { success: true, vendor: updated };
+  try {
+    const response = await api.post('/wedding/vendor/profile', data);
+    return response.data;
+  } catch (error) {
+    return { 
+      success: false, 
+      error: error.response?.data?.message || error.message 
+    };
+  }
+};
+
+/**
+ * Get public vendor listings
+ */
+export const getPublicVendors = async (filters = {}) => {
+  try {
+    const response = await api.get('/wedding/vendors', { params: filters });
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch vendors:", error);
+    return [];
+  }
+};
+
+/**
+ * Get single vendor detail (Public)
+ */
+export const getVendorById = async (id) => {
+  try {
+    const response = await api.get(`/wedding/vendors/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch vendor detail:", error);
+    return null;
+  }
 };

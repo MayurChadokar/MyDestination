@@ -1,6 +1,6 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getAdminDestinations, saveAdminDestination, deleteAdminDestination, updateAdminDestination } from '../../services/storage';
+import { weddingService } from '../../../../services/weddingService';
 import { adminStyles } from '../theme/themeConfig';
 import { 
   Plus, 
@@ -10,7 +10,6 @@ import {
   IndianRupee,
   Type,
   LayoutGrid,
-  Search,
   PlusCircle,
   X,
   Upload,
@@ -22,6 +21,7 @@ import {
 
 const ManageDestinations = () => {
   const [destinations, setDestinations] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   const categories = ['Heritage', 'Beach', 'Hill', 'Resort'];
@@ -36,6 +36,22 @@ const ManageDestinations = () => {
     description: '',
     image: ''
   });
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const data = await weddingService.getDestinations();
+      setDestinations(data);
+    } catch (error) {
+      console.error('Error fetching destinations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -53,32 +69,28 @@ const ManageDestinations = () => {
     reader.readAsDataURL(file);
   };
 
-  useEffect(() => {
-    setDestinations(getAdminDestinations());
-  }, []);
-
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault();
     if (!newDest.name || !newDest.location || !newDest.startingPrice) {
       alert("Please fill in all required fields (Name, Location, Starting Price)");
       return;
     }
     
-    if (editingDest) {
-      updateAdminDestination({
-        ...newDest,
-        id: editingDest.id,
-        startingPrice: Number(newDest.startingPrice)
-      });
-    } else {
-      saveAdminDestination({
-        ...newDest,
-        startingPrice: Number(newDest.startingPrice)
-      });
+    try {
+      setLoading(true);
+      if (editingDest) {
+        await weddingService.updateDestination(editingDest._id, newDest);
+      } else {
+        await weddingService.addDestination(newDest);
+      }
+      setShowAddForm(false);
+      resetForm();
+      fetchData();
+    } catch (error) {
+      alert('Failed to save destination');
+    } finally {
+      setLoading(false);
     }
-    
-    setDestinations(getAdminDestinations());
-    resetForm();
   };
 
   const handleEdit = (dest) => {
@@ -116,12 +128,26 @@ const ManageDestinations = () => {
     setShowAddForm(true);
   };
 
-  const handleDelete = (id) => {
-    if (window.confirm("Are you sure you want to delete this destination?")) {
-      deleteAdminDestination(id);
-      setDestinations(getAdminDestinations());
+  const handleDelete = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this destination?")) return;
+    try {
+      setLoading(true);
+      await weddingService.deleteDestination(id);
+      fetchData();
+    } catch (error) {
+      alert('Failed to delete destination');
+    } finally {
+      setLoading(false);
     }
   };
+
+  if (loading && destinations.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[hsl(353,45%,35%)]"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -140,10 +166,9 @@ const ManageDestinations = () => {
         </div>
       </div>
 
-      {/* Grid of existing destinations */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
          {destinations.map((dest) => (
-           <div key={dest.id} className={`${adminStyles.glassCard} p-6 rounded-[2rem] group relative overflow-hidden h-80`}>
+           <div key={dest._id} className={`${adminStyles.glassCard} p-6 rounded-[2rem] group relative overflow-hidden h-80`}>
               <img 
                 src={dest.image || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=2070&auto=format&fit=crop'} 
                 className="absolute inset-0 w-full h-full object-cover opacity-20 group-hover:opacity-40 transition-opacity duration-700" 
@@ -162,7 +187,7 @@ const ManageDestinations = () => {
                           <Pencil size={16} />
                        </button>
                        <button 
-                         onClick={() => handleDelete(dest.id)}
+                         onClick={() => handleDelete(dest._id)}
                          className="p-2.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-500 hover:text-white transition-all shadow-sm"
                        >
                           <Trash2 size={16} />
@@ -183,7 +208,7 @@ const ManageDestinations = () => {
                        <p className="text-sm font-black text-slate-800">₹{(dest.startingPrice / 100000).toFixed(1)}L+</p>
                     </div>
                     <span className="text-[10px] font-black text-[#B06A6C] uppercase tracking-widest flex items-center gap-1 bg-[#B06A6C]/5 px-3 py-1 rounded-full">
-                       DYNAMIC CONTENT
+                       LIVE DATA
                     </span>
                  </div>
               </div>
@@ -191,10 +216,10 @@ const ManageDestinations = () => {
          ))}
          
          {destinations.length === 0 && (
-           <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-[#B06A6C]/20 rounded-[2.5rem] bg-white/30 backdrop-blur-sm">
-              <PlusCircle size={48} className="text-[#B06A6C]/20 mb-4" />
-              <p className="text-gray-400 font-medium">No custom destinations added yet.</p>
-           </div>
+            <div className="col-span-full py-20 flex flex-col items-center justify-center border-2 border-dashed border-[#B06A6C]/20 rounded-[2.5rem] bg-white/30 backdrop-blur-sm">
+               <PlusCircle size={48} className="text-[#B06A6C]/20 mb-4" />
+               <p className="text-gray-400 font-medium">No custom destinations added yet.</p>
+            </div>
          )}
       </div>
 
@@ -334,7 +359,7 @@ const ManageDestinations = () => {
                                <div className="text-center">
                                   <p className="text-sm font-bold text-slate-600">Click to upload photo</p>
                                   <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-1">PNG, JPG or WebP (Max 2MB)</p>
-                               </div>
+                                </div>
                             </div>
                          </label>
                        ) : (
@@ -355,7 +380,7 @@ const ManageDestinations = () => {
                          </div>
                        )}
                     </div>
-                  </div>
+                 </div>
 
                  <div className="md:col-span-2 space-y-2">
                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Description</label>
@@ -368,8 +393,8 @@ const ManageDestinations = () => {
                  </div>
 
                  <div className="md:col-span-2 pt-4">
-                    <button type="submit" className="w-full py-4 bg-[hsl(353,45%,35%)] text-white rounded-[2rem] font-bold shadow-xl shadow-[hsl(353,45%,35%)]/20 hover:scale-[1.02] active:scale-95 transition-all">
-                       {editingDest ? 'Update Destination' : 'Save Destination'}
+                    <button type="submit" disabled={loading} className="w-full py-4 bg-[hsl(353,45%,35%)] text-white rounded-[2rem] font-bold shadow-xl shadow-[hsl(353,45%,35%)]/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50">
+                       {loading ? 'Processing...' : (editingDest ? 'Update Destination' : 'Save Destination')}
                     </button>
                  </div>
               </form>

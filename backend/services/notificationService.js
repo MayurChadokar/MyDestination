@@ -1,6 +1,6 @@
 import { getFirebaseAdmin } from '../config/firebase.js';
-import User from '../models/User.js';
-import Notification from '../models/Notification.js';
+import User from '../modules/user/models/User.js';
+import Notification from '../modules/user/models/Notification.js';
 
 class NotificationService {
   /**
@@ -114,11 +114,11 @@ class NotificationService {
       console.log(`[NotificationService] Pruning invalid token for ${userType} ${userId}...`);
       let Model;
       if (userType === 'admin') {
-        Model = (await import('../models/Admin.js')).default;
+        Model = (await import('../modules/admin/models/Admin.js')).default;
       } else if (userType === 'partner') {
-        Model = (await import('../models/Partner.js')).default;
+        Model = (await import('../modules/partner/models/Partner.js')).default;
       } else {
-        Model = (await import('../models/User.js')).default;
+        Model = (await import('../modules/user/models/User.js')).default;
       }
 
       const user = await Model.findById(userId);
@@ -151,10 +151,10 @@ class NotificationService {
       let user;
 
       if (userType === 'admin') {
-        const Admin = (await import('../models/Admin.js')).default;
+        const Admin = (await import('../modules/admin/models/Admin.js')).default;
         user = await Admin.findById(userId);
       } else if (userType === 'partner') {
-        const Partner = (await import('../models/Partner.js')).default;
+        const Partner = (await import('../modules/partner/models/Partner.js')).default;
         user = await Partner.findById(userId);
       } else {
         user = await User.findById(userId);
@@ -258,7 +258,7 @@ class NotificationService {
    */
   async sendToAdmins(notification, data = {}) {
     try {
-      const Admin = (await import('../models/Admin.js')).default;
+      const Admin = (await import('../modules/admin/models/Admin.js')).default;
       const activeAdmins = await Admin.find({ isActive: true });
 
       if (activeAdmins.length === 0) {
@@ -304,7 +304,7 @@ class NotificationService {
       // ── 1. Fetch recipients ────────────────────────────────────────────────
       let recipients = []; // [{ userId, userType, fcmTokens }]
 
-      const Partner = (await import('../models/Partner.js')).default;
+      const Partner = (await import('../modules/partner/models/Partner.js')).default;
 
       if (target === 'all_users' || target === 'all') {
         const users = await User.find({ isBlocked: { $ne: true } })

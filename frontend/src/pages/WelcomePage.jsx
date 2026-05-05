@@ -28,6 +28,7 @@ const slides = [
     theme: "from-rose-600/20 to-transparent",
     btnColor: "bg-pink-100 hover:bg-pink-200 text-pink-950"
   },
+/*
   {
     id: 3,
     title: "Taxi Service",
@@ -38,6 +39,7 @@ const slides = [
     theme: "from-amber-600/20 to-transparent",
     btnColor: "bg-yellow-100 hover:bg-yellow-200 text-yellow-950"
   }
+*/
 ];
 
 const WelcomePage = () => {

@@ -1,4 +1,4 @@
-﻿import { useParams, Link } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Star, MapPin, Briefcase } from "lucide-react";
 import ScrollReveal from "../components/ScrollReveal";
 import PackageCard from "../components/PackageCard";
@@ -159,6 +159,8 @@ const PlannerDetailPage = () => {
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         plannerName={planner.name}
+        targetId={planner.id}
+        targetType="Vendor"
       />
     </div>
   );

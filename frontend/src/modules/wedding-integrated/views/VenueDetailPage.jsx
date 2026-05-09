@@ -19,6 +19,7 @@ import toast from 'react-hot-toast';
 import { formatPrice } from "../data/weddingData";
 import { getAllDestinations, getVendorVenues } from "../services/storage";
 import PlanWeddingModal from "../components/PlanWeddingModal";
+import { weddingService } from "../../../services/weddingService";
 
 const VenueDetailPage = () => {
   const { destId, venueId } = useParams();
@@ -31,24 +32,33 @@ const VenueDetailPage = () => {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    const allDests = getAllDestinations();
-    const foundDest = allDests.find(d => d.id === destId);
-    
-    if (foundDest) {
-      setDest(foundDest);
-      // Check static venues first
-      let foundVenue = foundDest.venues.find(v => v.id === venueId);
-      
-      // If not found, check approved vendor venues
-      if (!foundVenue) {
-        const vendorVenues = getVendorVenues();
-        foundVenue = vendorVenues.find(v => v.id === venueId && v.status === 'approved');
+    const fetchVenueDetails = async () => {
+      try {
+        setLoading(true);
+        const [venueData, dests] = await Promise.all([
+          weddingService.getVenues().then(venues => venues.find(v => (v.id === venueId || v._id === venueId))),
+          weddingService.getDestinations()
+        ]);
+        
+        if (venueData) {
+          setVenue(venueData);
+          const foundDest = dests.find(d => (d.id === destId || d._id === destId));
+          setDest(foundDest);
+        }
+      } catch (error) {
+        console.error("Failed to fetch venue details", error);
+      } finally {
+        setLoading(false);
       }
-      
-      setVenue(foundVenue);
-    }
-    setLoading(false);
+    };
+    fetchVenueDetails();
   }, [destId, venueId]);
+
+  useEffect(() => {
+    if (venueId) {
+      weddingService.incrementView('venue', venueId).catch(err => console.error("View increment failed", err));
+    }
+  }, [venueId]);
 
   const handleShare = () => {
     if (navigator.share) {

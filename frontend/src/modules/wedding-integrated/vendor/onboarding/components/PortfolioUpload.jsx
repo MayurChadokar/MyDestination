@@ -1,14 +1,18 @@
 import { useRef } from "react";
 import { Upload, X, ImagePlus } from "lucide-react";
+import { fileToBase64 } from "../../../../../utils/fileUtils";
 
 const PortfolioUpload = ({ images = [], onUpdate }) => {
   const fileRef = useRef(null);
 
-  const handleFiles = (files) => {
-    const newPreviews = Array.from(files)
-      .filter((f) => f.type.startsWith("image/"))
-      .map((f) => URL.createObjectURL(f));
-    onUpdate([...images, ...newPreviews]);
+  const handleFiles = async (files) => {
+    try {
+      const validFiles = Array.from(files).filter((f) => f.type.startsWith("image/"));
+      const base64Files = await Promise.all(validFiles.map(f => fileToBase64(f)));
+      onUpdate([...images, ...base64Files]);
+    } catch (error) {
+      console.error("Failed to convert files to base64", error);
+    }
   };
 
   const handleDrop = (e) => {

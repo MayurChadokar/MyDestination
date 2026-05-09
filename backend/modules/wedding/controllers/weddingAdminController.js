@@ -1,13 +1,102 @@
 import WeddingVenue from '../models/WeddingVenue.js';
+import WeddingVendor from '../models/WeddingVendor.js';
 import WeddingEnquiry from '../models/WeddingEnquiry.js';
 import User from '../../user/models/User.js';
+import Admin from '../../admin/models/Admin.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+
+/**
+ * @desc    Wedding Admin Login
+ * @route   POST /api/wedding/admin/login
+ * @access  Public
+ */
+export const loginWeddingAdmin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Email and password are required' });
+    }
+
+    const admin = await Admin.findOne({ email: email.trim().toLowerCase() }).select('+password');
+    
+    if (!admin) {
+      return res.status(401).json({ message: 'Invalid admin credentials' });
+    }
+
+    const isMatch = await bcrypt.compare(password, admin.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: 'Invalid admin credentials' });
+    }
+
+    // Update last login
+    admin.lastLogin = new Date();
+    await admin.save();
+
+    const token = jwt.sign(
+      { id: admin._id, role: admin.role }, 
+      process.env.JWT_SECRET
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'Admin login successful',
+      token,
+      admin: {
+        id: admin._id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * @desc    Seed a dummy wedding admin (run once)
+ * @route   POST /api/wedding/admin/seed
+ * @access  Public (for initial setup only)
+ */
+export const seedWeddingAdmin = async (req, res) => {
+  try {
+    const existingAdmin = await Admin.findOne({ email: 'admin@mydestination.com' });
+    if (existingAdmin) {
+      return res.status(200).json({ 
+        success: true, 
+        message: 'Admin already exists',
+        credentials: { email: 'admin@mydestination.com', password: 'admin123' }
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash('admin123', 10);
+    const admin = await Admin.create({
+      name: 'My Destination Admin',
+      email: 'admin@mydestination.com',
+      phone: '9999999999',
+      password: hashedPassword,
+      role: 'superadmin',
+      isActive: true
+    });
+
+    res.status(201).json({ 
+      success: true, 
+      message: 'Dummy admin created successfully!',
+      credentials: { email: 'admin@mydestination.com', password: 'admin123' }
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
 export const getAdminStats = async (req, res) => {
   try {
     const totalVenues = await WeddingVenue.countDocuments();
     const pendingVenues = await WeddingVenue.countDocuments({ status: 'pending' });
     const totalEnquiries = await WeddingEnquiry.countDocuments();
-    const pendingEnquiries = await WeddingEnquiry.countDocuments({ status: 'pending' });
+    const pendingEnquiries = await WeddingEnquiry.countDocuments({ status: 'New' });
     const totalVendors = await User.countDocuments({ role: 'vendor' });
     const pendingVendors = await User.countDocuments({ role: 'vendor', partnerApprovalStatus: 'pending' });
 
@@ -54,16 +143,61 @@ export const updateVendorStatus = async (req, res) => {
       return res.status(400).json({ message: 'Invalid status' });
     }
 
+    const kycStatusValue = status === 'approved' ? 'Verified' : (status === 'rejected' ? 'Rejected' : 'Pending');
+    
     const item = await User.findByIdAndUpdate(
       id, 
-      { partnerApprovalStatus: status }, 
+      { 
+        partnerApprovalStatus: status,
+        kycStatus: kycStatusValue
+      }, 
       { new: true }
     );
 
     if (!item) return res.status(404).json({ message: 'Vendor not found' });
     
+    // Also update WeddingVendor profile status
+    const weddingStatus = status === 'approved' ? 'active' : (status === 'rejected' ? 'inactive' : 'pending');
+    await WeddingVendor.findOneAndUpdate({ user: id }, { status: weddingStatus });
+    
     res.status(200).json({ success: true, item });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+export const getAdminFinancials = async (req, res) => {
+  try {
+    const bookedEnquiries = await WeddingEnquiry.find({ status: 'Booked' })
+      .populate('user', 'name email')
+      .sort({ updatedAt: -1 });
+
+    const totalRevenue = bookedEnquiries.reduce((acc, curr) => acc + (curr.actualAmount || 0), 0);
+    const commissionsEarned = bookedEnquiries.reduce((acc, curr) => acc + (curr.commissionAmount || 0), 0);
+    
+    // For now, let's assume pending payouts and net profit are derived
+    const pendingPayouts = totalRevenue - commissionsEarned; 
+    const netProfit = commissionsEarned; // Simplified
+
+    const recentTransactions = bookedEnquiries.map(enq => ({
+      id: enq._id,
+      vendor: enq.targetId?.propertyName || enq.targetId?.name || 'N/A',
+      client: enq.name || enq.user?.name || 'N/A',
+      amount: `₹${enq.actualAmount?.toLocaleString('en-IN')}`,
+      commission: `₹${enq.commissionAmount?.toLocaleString('en-IN')}`,
+      date: new Date(enq.updatedAt).toLocaleDateString(),
+      status: 'Paid' // Placeholder
+    }));
+
+    res.status(200).json({
+      success: true,
+      totalRevenue: `₹${(totalRevenue / 100000).toFixed(1)} L`,
+      commissionsEarned: `₹${(commissionsEarned / 100000).toFixed(1)} L`,
+      pendingPayouts: `₹${(pendingPayouts / 100000).toFixed(1)} L`,
+      netProfit: `₹${(netProfit / 100000).toFixed(1)} L`,
+      recentTransactions
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
   }
 };

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getAllDestinations, saveVendorVenue, updateVendorVenue } from '../../../services/storage';
 import { 
   Building2, 
   MapPin, 
@@ -18,6 +17,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import VendorLayout from '../layouts/VendorLayout';
+import { weddingService } from '../../../../../services/weddingService';
 import toast from 'react-hot-toast';
 
 const ALL_AMENITIES = [
@@ -120,41 +120,42 @@ const AddVenue = () => {
   };
 
   useEffect(() => {
-    setDestinations(getAllDestinations());
+    const fetchDestinations = async () => {
+      try {
+        const data = await weddingService.getDestinations();
+        setDestinations(data);
+      } catch (error) {
+        console.error("Error fetching destinations:", error);
+      }
+    };
+    fetchDestinations();
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    // Simulate API/Network lag
-    setTimeout(() => {
-      try {
-        const payload = {
-          ...formData,
-          capacity: Number(formData.capacity),
-          pricePerDay: Number(formData.pricePerDay),
-          vendorName: user?.name || 'Authorized Vendor',
-          vendorId: user?.id
-        };
+    try {
+      const payload = {
+        ...formData,
+        capacity: Number(formData.capacity),
+        pricePerDay: Number(formData.pricePerDay),
+      };
 
-        if (editVenue) {
-          updateVendorVenue({ ...payload, id: editVenue.id, status: editVenue.status });
-          toast.success("Venue Updated", { description: "Your changes have been saved successfully." });
-        } else {
-          saveVendorVenue(payload);
-          toast.success("Venue Submitted", { description: "Property has been sent for admin verification." });
-        }
-        navigate('/vendor/venues/my');
-      } catch (error) {
-        console.error("Submission Error:", error);
-        toast.error("Submission Failed", { 
-          description: "Storage limit reached or connection lost. Try reducing image size." 
-        });
-      } finally {
-        setIsSubmitting(false);
+      if (editVenue) {
+        await weddingService.updateVendorVenue(editVenue._id, payload);
+        toast.success("Venue Updated", { description: "Your changes have been saved and sent for re-verification." });
+      } else {
+        await weddingService.createVendorVenue(payload);
+        toast.success("Venue Submitted", { description: "Property has been sent for admin verification." });
       }
-    }, 1000);
+      navigate('/wedding/vendor/venues/my');
+    } catch (error) {
+      console.error("Submission Error:", error);
+      toast.error(error.message || "Submission Failed");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -199,7 +200,7 @@ const AddVenue = () => {
                   >
                      <option value="">Select Destination</option>
                      {destinations.map(d => (
-                       <option key={d.id} value={d.id}>{d.name}</option>
+                       <option key={d._id} value={d._id}>{d.name}</option>
                      ))}
                   </select>
                   <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-[#B06A6C] w-4 h-4 pointer-events-none group-hover:scale-110 transition-transform" />

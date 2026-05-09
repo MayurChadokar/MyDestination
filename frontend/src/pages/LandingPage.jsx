@@ -453,7 +453,7 @@ const LandingPage = () => {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-12">
-          <div className="flex flex-col items-center">
+          <a href="http://localhost:5173/" className="flex flex-col items-center hover:scale-105 transition-transform cursor-pointer">
             <div className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center mb-2 md:mb-6">
               <img src="https://cdn-icons-gif.flaticon.com/15576/15576191.gif" alt="Transport Icon" className="w-10 h-10 md:w-16 md:h-16 object-contain" />
             </div>
@@ -461,7 +461,7 @@ const LandingPage = () => {
             <p className="text-[10px] md:text-xs text-gray-500 leading-relaxed px-1 md:px-0">
               Reliable and comfortable transportation services for your local tours and transfers.
             </p>
-          </div>
+          </a>
           <div className="flex flex-col items-center">
             <div className="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center mb-2 md:mb-6">
               <img src="https://cdn-icons-gif.flaticon.com/8701/8701055.gif" alt="Events Icon" className="w-10 h-10 md:w-16 md:h-16 object-contain" />

@@ -347,7 +347,7 @@ const UserLogin = () => {
 
                     <div className="mt-auto pt-4 text-center">
                         <p className="text-[#A3B18A] text-sm font-bold">
-                            New to Rukkoo.in?{' '}
+                            New to My Destination?{' '}
                             <button
                                 onClick={() => navigate('/signup')}
                                 className="text-[#39593f] font-black hover:underline ml-1 px-1"

@@ -94,7 +94,7 @@ const AdminLogin = () => {
                         transition={{ type: "spring", delay: 0.2 }}
                         className="inline-block mb-4"
                     >
-                        <img src={logo} alt="Rukkoo.in Admin" className="w-32 h-auto filter brightness-0 invert" />
+                        <img src={logo} alt="My Destination Admin" className="w-32 h-auto filter brightness-0 invert" />
                     </motion.div>
                     <h1 className="text-3xl font-bold text-white">Admin Portal</h1>
                     <p className="text-gray-400 mt-2">Secure access to platform management</p>

@@ -140,7 +140,7 @@ const DestinationDetailPage = () => {
       <section className="py-6 md:py-12 px-4 border-b border-border">
         <div className="max-w-6xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-6">
           {[
-            { icon: IndianRupee, label: "Avg Cost", value: dest.avgCost || (dest.startingPrice ? `₹${(dest.startingPrice / 100000).toFixed(1)}L+` : "Varies") },
+            { icon: IndianRupee, label: "Avg Cost", value: dest.avgCost || (dest.startingPrice ? `${formatPrice(dest.startingPrice)}+` : "Varies") },
             { icon: Calendar, label: "Best Season", value: dest.bestSeason || "Oct - Mar" },
             {
               icon: Building2,

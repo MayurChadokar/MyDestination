@@ -8,20 +8,31 @@ import {
   getVenues, 
   getVenueDetail,
   getAdminVenues, 
-  updateVenueStatus 
+  updateVenueStatus,
+  createVenue,
+  getVendorVenues,
+  updateVenue,
+  deleteVenue
 } from '../controllers/weddingVenueController.js';
 import {
   getVendorProfile,
   updateVendorProfile,
+  applyAsVendor,
   getPublicVendors,
-  getVendorDetail
+  getVendorDetail,
+  getVendorDashboardStats,
+  incrementView
 } from '../controllers/weddingVendorController.js';
 import { 
   getDestinations, 
+  getDestinationById,
   addDestination, 
   updateDestination, 
   deleteDestination,
-  getCategories
+  getCategories,
+  addCategory,
+  updateCategory,
+  deleteCategory
 } from '../controllers/weddingDestinationController.js';
 import { 
   createEnquiry, 
@@ -29,7 +40,8 @@ import {
   updateEnquiryStatus, 
   deleteEnquiry,
   getVendorLeads,
-  updateLeadStatus
+  updateLeadStatus,
+  getMyEnquiries
 } from '../controllers/weddingEnquiryController.js';
 import { 
   getGallery, 
@@ -46,38 +58,53 @@ import {
   getPublicReviews
 } from '../controllers/weddingReviewController.js';
 import { 
+  loginWeddingAdmin,
+  seedWeddingAdmin,
   getAdminStats, 
   getAdminCustomers, 
   getAdminVendors, 
-  updateVendorStatus 
+  updateVendorStatus,
+  getAdminFinancials
 } from '../controllers/weddingAdminController.js';
-import { protect, authorizedRoles } from '../../../middlewares/authMiddleware.js';
+import { protect, authorizedRoles, optionalProtect } from '../../../middlewares/authMiddleware.js';
 
 const router = express.Router();
 
 // Public Routes
 router.get('/categories', getCategories);
 router.get('/destinations', getDestinations);
+router.get('/destinations/:id', getDestinationById);
 router.get('/venues', getVenues);
 router.get('/venues/:id', getVenueDetail);
-router.post('/enquiry', createEnquiry);
+router.post('/enquiry', optionalProtect, createEnquiry);
 router.get('/gallery', getGallery);
 router.get('/real-weddings', getRealWeddings);
 router.get('/vendors', getPublicVendors);
 router.get('/vendors/:id', getVendorDetail);
 
+// Public Vendor Application (No auth required)
+router.post('/vendor/apply', applyAsVendor);
+
 // Public Review Routes
 router.get('/reviews/:targetId', getPublicReviews);
-router.post('/reviews', protect, createReview);
+router.post('/reviews', optionalProtect, createReview);
+router.get('/my-enquiries', protect, getMyEnquiries);
 
 // Auth Routes (Vendor)
 router.post('/vendor/register', registerVendor);
 router.post('/vendor/login', loginVendor);
 
 // Vendor Profile Routes (Protected)
+router.get('/vendor/dashboard/stats', protect, authorizedRoles('vendor'), getVendorDashboardStats);
 router.get('/vendor/profile', protect, authorizedRoles('vendor'), getVendorProfile);
-router.post('/vendor/profile', protect, authorizedRoles('vendor'), updateVendorProfile);
+router.post('/vendor/profile', protect, authorizedRoles('user', 'vendor'), updateVendorProfile);
 router.patch('/vendor/password', protect, authorizedRoles('vendor'), updatePassword);
+
+// Vendor Venue Routes (Protected)
+router.post('/vendor/venues', protect, authorizedRoles('vendor'), createVenue);
+router.get('/vendor/venues', protect, authorizedRoles('vendor'), getVendorVenues);
+router.put('/vendor/venues/:id', protect, authorizedRoles('vendor'), updateVenue);
+router.delete('/vendor/venues/:id', protect, authorizedRoles('vendor'), deleteVenue);
 
 // Vendor Lead Routes (Protected)
 router.get('/vendor/leads', protect, authorizedRoles('vendor'), getVendorLeads);
@@ -86,6 +113,10 @@ router.patch('/vendor/leads/:id/status', protect, authorizedRoles('vendor'), upd
 // Vendor Review Routes (Protected)
 router.get('/vendor/reviews', protect, authorizedRoles('vendor'), getVendorReviews);
 router.patch('/vendor/reviews/:id/reply', protect, authorizedRoles('vendor'), replyToReview);
+
+// Admin Auth Routes (Public)
+router.post('/admin/login', loginWeddingAdmin);
+router.post('/admin/seed', seedWeddingAdmin);
 
 // Admin Routes (Protected)
 router.get('/admin/stats', protect, authorizedRoles('admin', 'superadmin'), getAdminStats);
@@ -107,10 +138,16 @@ router.patch('/admin/venues/:id/status', protect, authorizedRoles('admin', 'supe
 // Admin Vendor Routes
 router.get('/admin/vendors', protect, authorizedRoles('admin', 'superadmin'), getAdminVendors);
 router.patch('/admin/vendors/:id/status', protect, authorizedRoles('admin', 'superadmin'), updateVendorStatus);
+router.get('/admin/financials', protect, authorizedRoles('admin', 'superadmin'), getAdminFinancials);
 
 // Admin Destination Routes
 router.post('/admin/destinations', protect, authorizedRoles('admin', 'superadmin'), addDestination);
 router.patch('/admin/destinations/:id', protect, authorizedRoles('admin', 'superadmin'), updateDestination);
 router.delete('/admin/destinations/:id', protect, authorizedRoles('admin', 'superadmin'), deleteDestination);
+
+// Admin Category Routes
+router.post('/admin/categories', protect, authorizedRoles('admin', 'superadmin'), addCategory);
+router.patch('/admin/categories/:id', protect, authorizedRoles('admin', 'superadmin'), updateCategory);
+router.delete('/admin/categories/:id', protect, authorizedRoles('admin', 'superadmin'), deleteCategory);
 
 export default router;

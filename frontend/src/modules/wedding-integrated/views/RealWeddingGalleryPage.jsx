@@ -1,7 +1,7 @@
-﻿import React, { useEffect } from "react";
+import React, { useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, Share2, Heart, Plus } from "lucide-react";
-import { getAllRealWeddings } from "../services/storage";
+import { weddingService } from "../../../services/weddingService";
 import ScrollReveal from "../components/ScrollReveal";
 import PlanWeddingModal from "../components/PlanWeddingModal";
 
@@ -10,13 +10,25 @@ const RealWeddingGalleryPage = () => {
   const navigate = useNavigate();
   const [isEnquiryOpen, setIsEnquiryOpen] = React.useState(false);
   const [isLiked, setIsLiked] = React.useState(false);
-
-  const realWeddings = getAllRealWeddings();
-  const wedding = realWeddings.find((w) => w.id === weddingId);
+  const [wedding, setWedding] = React.useState(null);
+  const [loading, setLoading] = React.useState(true);
 
   useEffect(() => {
     window.scrollTo(0, 0);
-  }, []);
+    const fetchWedding = async () => {
+      try {
+        setLoading(true);
+        const data = await weddingService.getRealWeddings();
+        const found = data.find((w) => (w.id === weddingId || w._id === weddingId));
+        setWedding(found);
+      } catch (error) {
+        console.error("Failed to fetch wedding details", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWedding();
+  }, [weddingId]);
 
   const handleBack = () => {
     if (window.history.state && window.history.state.idx > 0) {
@@ -42,6 +54,14 @@ const RealWeddingGalleryPage = () => {
       console.log("Error sharing:", error);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
 
   if (!wedding) {
     return (

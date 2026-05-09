@@ -29,6 +29,24 @@ export const weddingService = {
     }
   },
 
+  getVendorDashboardStats: async () => {
+    try {
+      const response = await api.get('/wedding/vendor/dashboard/stats');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  incrementView: async (type, id) => {
+    try {
+      const response = await api.patch(`/wedding/increment-view/${type}/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   // Admin Services
   getAdminStats: async () => {
     try {
@@ -186,6 +204,79 @@ export const weddingService = {
   deleteDestination: async (id) => {
     try {
       const response = await api.delete(`/wedding/admin/destinations/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  
+  addCategory: async (data) => {
+    try {
+      const response = await api.post('/wedding/admin/categories', data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  updateCategory: async (id, data) => {
+    try {
+      const response = await api.patch(`/wedding/admin/categories/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  deleteCategory: async (id) => {
+    try {
+      const response = await api.delete(`/wedding/admin/categories/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getAdminFinancials: async () => {
+    try {
+      const response = await api.get('/wedding/admin/financials');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Vendor Venue Methods
+  createVendorVenue: async (data) => {
+    try {
+      const response = await api.post('/wedding/vendor/venues', data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getVendorVenues: async () => {
+    try {
+      const response = await api.get('/wedding/vendor/venues');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  updateVendorVenue: async (id, data) => {
+    try {
+      const response = await api.put(`/wedding/vendor/venues/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  deleteVendorVenue: async (id) => {
+    try {
+      const response = await api.delete(`/wedding/vendor/venues/${id}`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

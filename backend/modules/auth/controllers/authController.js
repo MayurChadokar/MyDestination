@@ -82,6 +82,19 @@ export const sendOtp = async (req, res) => {
         });
       }
 
+      // Check Approval Status for Vendors/Partners
+      if (user.role === 'vendor' || user.role === 'partner') {
+        if (user.partnerApprovalStatus !== 'approved') {
+          return res.status(403).json({
+            success: false,
+            message: user.partnerApprovalStatus === 'rejected' 
+              ? 'Your application has been rejected. Please contact support.' 
+              : 'Your account is pending admin approval. You will be able to login once approved.',
+            partnerApprovalStatus: user.partnerApprovalStatus
+          });
+        }
+      }
+
       if (user.isDeleted) {
         // We allow them to request OTP. Re-activation happens in verifyOtp.
         console.log(`[AUTH] Deleted account ${phone} requesting OTP for re-activation.`);
@@ -443,6 +456,17 @@ export const verifyOtp = async (req, res) => {
         body: `${user.name} has joined the platform.`
       }, { type: 'new_user_registration', userId: user._id }).catch(err => console.error('Admin User alert failed:', err));
 
+    }
+
+    // BLOCK LOGIN IF NOT APPROVED (FOR VENDORS AND PARTNERS)
+    if (user.role === 'vendor' || user.role === 'partner') {
+      if (user.partnerApprovalStatus !== 'approved') {
+        return res.status(403).json({
+          success: false,
+          message: 'Your profile is pending admin approval. You can login once your account is verified and approved.',
+          partnerApprovalStatus: user.partnerApprovalStatus
+        });
+      }
     }
 
     const token = generateToken(user._id, user.role);

@@ -318,6 +318,9 @@ export const myBookings = [
 
 export const formatPrice = (price) => {
   if (price >= 10000000) return `₹${(price / 10000000).toFixed(1)}Cr`;
-  if (price >= 100000) return `₹${(price / 100000).toFixed(0)}L`;
+  if (price >= 100000) {
+    const lakhs = price / 100000;
+    return `₹${lakhs % 1 === 0 ? lakhs.toFixed(0) : lakhs.toFixed(1)}L`;
+  }
   return `₹${price.toLocaleString("en-IN")}`;
 };

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Loader2, ArrowRight, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import toast from 'react-hot-toast';
+import { api } from "../../../../services/apiService";
 import logoImg from "../../assets/logo.png";
 import weddingImg from "../../assets/wedding_pink.png";
 
@@ -27,13 +28,19 @@ const AdminLogin = () => {
     }
 
     setLoadingSubmit(true);
-    
-    setTimeout(() => {
-      // Allowing login with any credentials as per user request
-      toast.success("Admin access granted.");
-      localStorage.setItem("admin_token", "admin_authenticated");
-      navigate("/wedding/admin/dashboard");
-    }, 800);
+    try {
+      const response = await api.post('/wedding/admin/login', formData);
+      if (response.data.success) {
+        localStorage.setItem("admin_token", response.data.token);
+        localStorage.setItem("admin_user", JSON.stringify(response.data.admin));
+        toast.success("Admin login successful!");
+        navigate("/wedding/admin/dashboard");
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Login failed. Please check your credentials.");
+    } finally {
+      setLoadingSubmit(false);
+    }
   };
 
   const inputClass =

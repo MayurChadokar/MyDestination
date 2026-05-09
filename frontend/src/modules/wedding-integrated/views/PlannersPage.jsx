@@ -1,21 +1,39 @@
-﻿import { useState } from "react";
-import { Search } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Search, Loader2 } from "lucide-react";
 import PlannerCard from "../components/PlannerCard";
 import ScrollReveal from "../components/ScrollReveal";
-import { planners } from "../data/weddingData";
 import bgImg from "../assets/bgimage.png";
-
-const allCities = [...new Set(planners.flatMap((p) => p.cities))].sort();
+import { weddingVendorService } from "../../../services/apiService";
 
 const PlannersPage = () => {
   const [search, setSearch] = useState("");
   const [cityFilter, setCityFilter] = useState("All");
+  const [planners, setPlanners] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchPlanners();
+  }, []);
+
+  const fetchPlanners = async () => {
+    try {
+      setLoading(true);
+      const data = await weddingVendorService.getPublicVendors({ category: "Planning & Decor" });
+      setPlanners(data || []);
+    } catch (err) {
+      console.error("Failed to fetch planners:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const allCities = [...new Set(planners.flatMap((p) => p.cities || [p.city]))].filter(Boolean).sort();
 
   const filtered = planners.filter((p) => {
-    const matchCity = cityFilter === "All" || p.cities.includes(cityFilter);
+    const matchCity = cityFilter === "All" || (p.cities && p.cities.includes(cityFilter)) || p.city === cityFilter;
     const matchSearch =
       p.name.toLowerCase().includes(search.toLowerCase()) ||
-      p.company.toLowerCase().includes(search.toLowerCase());
+      (p.company || "").toLowerCase().includes(search.toLowerCase());
     return matchCity && matchSearch;
   });
 
@@ -75,13 +93,20 @@ const PlannersPage = () => {
             ))}
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {filtered.map((planner, i) => (
-              <ScrollReveal key={planner.id} delay={i * 80}>
-                <PlannerCard planner={planner} />
-              </ScrollReveal>
-            ))}
-          </div>
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <Loader2 className="w-10 h-10 animate-spin text-primary" />
+              <p className="text-muted-foreground font-medium">Finding the best planners for you...</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+              {filtered.map((planner, i) => (
+                <ScrollReveal key={planner._id || planner.id} delay={i * 80}>
+                  <PlannerCard planner={planner} />
+                </ScrollReveal>
+              ))}
+            </div>
+          )}
 
           {filtered.length === 0 && (
             <div className="text-center py-20 text-muted-foreground">

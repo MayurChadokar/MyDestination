@@ -70,6 +70,17 @@ export const loginVendor = async (req, res) => {
       return res.status(401).json({ message: 'Invalid vendor credentials' });
     }
 
+    // Check Approval Status
+    if (user.partnerApprovalStatus !== 'approved') {
+      return res.status(403).json({
+        success: false,
+        message: user.partnerApprovalStatus === 'rejected' 
+          ? 'Your application has been rejected. Please contact support.' 
+          : 'Your account is pending admin approval. You will be able to login once approved.',
+        partnerApprovalStatus: user.partnerApprovalStatus
+      });
+    }
+
     const isMatched = await bcrypt.compare(password, user.password);
     if (!isMatched) {
       return res.status(401).json({ message: 'Invalid vendor credentials' });

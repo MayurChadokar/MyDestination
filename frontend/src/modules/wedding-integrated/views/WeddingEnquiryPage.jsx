@@ -1,7 +1,7 @@
-﻿import { useState } from "react";
-import { Check, ChevronRight, ChevronLeft, PartyPopper } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, ChevronRight, ChevronLeft, PartyPopper, Loader2 } from "lucide-react";
 import ScrollReveal from "../components/ScrollReveal";
-import { saveEnquiry, destinations } from "../data/weddingData";
+import { weddingService } from "../../../services/weddingService";
 
 const services = [
   "Full Planning",
@@ -17,6 +17,8 @@ const services = [
 const WeddingEnquiryPage = () => {
   const [step, setStep] = useState(1);
   const [submitted, setSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [destinations, setDestinations] = useState([]);
   const [form, setForm] = useState({
     eventDate: "",
     guestCount: "",
@@ -29,6 +31,18 @@ const WeddingEnquiryPage = () => {
     notes: "",
   });
 
+  useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const data = await weddingService.getDestinations();
+        setDestinations(data);
+      } catch (err) {
+        console.error("Failed to fetch destinations:", err);
+      }
+    };
+    fetchDestinations();
+  }, []);
+
   const update = (key, value) => setForm({ ...form, [key]: value });
 
   const toggleService = (s) => {
@@ -38,9 +52,17 @@ const WeddingEnquiryPage = () => {
     update("selectedServices", selected);
   };
 
-  const handleSubmit = () => {
-    saveEnquiry(form);
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      await weddingService.createEnquiry(form);
+      setSubmitted(true);
+    } catch (err) {
+      console.error("Submission error:", err);
+      alert(err.message || "Failed to submit enquiry. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (submitted) {
@@ -155,7 +177,7 @@ const WeddingEnquiryPage = () => {
                   >
                     <option value="">Select</option>
                     {destinations.map((d) => (
-                      <option key={d.id} value={d.name}>
+                      <option key={d._id || d.id} value={d.name}>
                         {d.name}
                       </option>
                     ))}
@@ -261,13 +283,14 @@ const WeddingEnquiryPage = () => {
                 </div>
               </div>
             )}
-
+            
             {/* Navigation */}
             <div className="flex justify-between mt-8">
               {step > 1 ? (
                 <button
                   onClick={() => setStep(step - 1)}
-                  className="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium bg-muted text-muted-foreground transition-all duration-300 hover:bg-primary/10"
+                  disabled={loading}
+                  className="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium bg-muted text-muted-foreground transition-all duration-300 hover:bg-primary/10 disabled:opacity-50"
                 >
                   <ChevronLeft className="w-4 h-4" /> Back
                 </button>
@@ -285,9 +308,16 @@ const WeddingEnquiryPage = () => {
               ) : (
                 <button
                   onClick={handleSubmit}
-                  className="flex items-center gap-2 px-8 py-3 rounded-full text-sm font-medium wedding-gradient text-background transition-all duration-300 hover:shadow-lg hover:scale-105"
+                  disabled={loading}
+                  className="flex items-center gap-2 px-8 py-3 rounded-full text-sm font-medium wedding-gradient text-background transition-all duration-300 hover:shadow-lg hover:scale-105 disabled:opacity-70 disabled:scale-100"
                 >
-                  Submit Enquiry
+                  {loading ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Submitting...
+                    </>
+                  ) : (
+                    "Submit Enquiry"
+                  )}
                 </button>
               )}
             </div>

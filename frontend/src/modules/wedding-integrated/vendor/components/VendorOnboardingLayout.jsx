@@ -2,7 +2,7 @@ import { Outlet, Link } from "react-router-dom";
 import { VendorProvider } from "../context/VendorContext";
 import logoImg from "../../assets/logo.png";
 
-const VendorLayout = () => {
+const VendorOnboardingLayout = () => {
   return (
     <VendorProvider>
       <div className="wedding-module min-h-screen bg-background">
@@ -36,4 +36,4 @@ const VendorLayout = () => {
   );
 };
 
-export default VendorLayout;
+export default VendorOnboardingLayout;

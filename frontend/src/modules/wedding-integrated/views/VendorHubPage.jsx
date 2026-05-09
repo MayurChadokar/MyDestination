@@ -1,9 +1,27 @@
-﻿import React from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import { ChevronRight, Star, Shield, Clock, TrendingUp } from "lucide-react";
-import { vendorCategories, citiesData } from "../data/vendorListingData";
+import { weddingDestinationService } from "../../../services/apiService";
 
 const VendorHubPage = () => {
+  const [categories, setCategories] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const data = await weddingDestinationService.getCategories();
+        setCategories(Array.isArray(data) ? data : (data?.categories || []));
+      } catch (error) {
+        console.error("Failed to fetch categories", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
   const trustPoints = [
     { icon: Shield, title: "Verified Vendors", desc: "Every vendor is personally verified by our team before listing." },
     { icon: Star, title: "5000+ Reviews", desc: "Real reviews from real couples who have used these vendors." },
@@ -11,17 +29,24 @@ const VendorHubPage = () => {
     { icon: TrendingUp, title: "Best Prices", desc: "Competitive pricing with no hidden charges, guaranteed." },
   ];
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FFF5F6]">
+        <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="bg-[#FFF5F6] min-h-screen">
-
-      {/* â”€â”€ Wedding Categories (WMG exact style) â”€â”€ */}
+      {/* Wedding Categories */}
       <section className="max-w-7xl mx-auto px-4 md:px-8 py-10">
         <h2 className="text-xl font-bold text-slate-800 mb-5">
           Wedding Categories
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {vendorCategories.map((cat) => (
+          {categories.map((cat) => (
             <Link
               key={cat.name}
               to={`/wedding/vendors?category=${encodeURIComponent(cat.name)}`}

@@ -110,6 +110,37 @@ const ProfileEditor = () => {
     return defaultData;
   });
 
+  // Fetch real vendor profile from API
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const { getVendor } = await import('../../data/vendorApi.js');
+        const res = await getVendor();
+        if (res.success && res.vendor) {
+          const v = res.vendor;
+          setVendorData(prev => ({
+            ...prev,
+            name: v.name || prev.name,
+            location: v.location || prev.location,
+            category: v.category || prev.category,
+            phone: v.contactPhone || prev.phone,
+            email: v.contactEmail || prev.email,
+            about: v.about || prev.about,
+            services: v.services || prev.services,
+            portfolio: v.portfolio || prev.portfolio,
+            basePackage: {
+              ...prev.basePackage,
+              price: v.price?.base ? `₹${v.price.base}` : prev.basePackage.price
+            }
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to fetch profile", error);
+      }
+    };
+    fetchProfile();
+  }, []);
+
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('vendorProfileUpdate', { detail: vendorData }));
   }, [vendorData]);
@@ -154,9 +185,11 @@ const ProfileEditor = () => {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     try {
       const dataToSave = { ...vendorData, ownerId: user?.id };
+      
+      // Update local storage
       const allProjects = JSON.parse(localStorage.getItem('vendorProjects') || '[]');
       const projectIndex = allProjects.findIndex(p => p.id === vendorData.id);
       
@@ -166,14 +199,32 @@ const ProfileEditor = () => {
       } else {
         updatedProjects = [...allProjects, dataToSave];
       }
-      
       localStorage.setItem('vendorProjects', JSON.stringify(updatedProjects));
       window.dispatchEvent(new CustomEvent('vendorProfileUpdate', { detail: dataToSave }));
+      
+      // Save to backend API
+      const { createVendor } = await import('../../data/vendorApi.js');
+      const apiPayload = {
+        name: vendorData.name,
+        category: vendorData.category,
+        location: vendorData.location,
+        about: vendorData.about,
+        contactPhone: vendorData.phone,
+        contactEmail: vendorData.email,
+        price: {
+            base: parseInt((vendorData.basePackage?.price || '0').replace(/\D/g, '')),
+            type: 'total'
+        },
+        services: vendorData.services,
+        portfolio: vendorData.portfolio
+      };
+      
+      await createVendor(apiPayload);
       
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
     } catch (e) {
-      alert("Storage limit reached! Please use smaller images.");
+      alert("Storage limit reached or failed to save to server.");
     }
   };
 

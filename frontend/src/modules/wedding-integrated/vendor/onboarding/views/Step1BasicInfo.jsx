@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronRight, ChevronDown, Loader2, ArrowRight } from "lucide-react";
 import ProgressBar from "../components/ProgressBar";
 import useVendorForm from "../../hooks/useVendorForm";
 import { useAuth } from "../../context/AuthContext";
 import { getCategories } from "../../data/categoryApi";
-import { vendorLocations } from "../../data/vendorMockData";
+import { weddingService } from "../../../../../services/weddingService";
 import { getAdminVendors } from "../../../services/storage";
+import toast from "react-hot-toast";
 import {
   Select,
   SelectContent,
@@ -17,11 +18,14 @@ import {
 
 const Step1BasicInfo = () => {
   const navigate = useNavigate();
-  const { basicInfo, updateBasicInfo } = useVendorForm();
+  const { basicInfo, updateBasicInfo, submitForm } = useVendorForm();
   const { user } = useAuth();
   const [errors, setErrors] = useState({});
   const [availableCategories, setAvailableCategories] = useState([]);
+  const [availableLocations, setAvailableLocations] = useState([]);
   const [loadingCats, setLoadingCats] = useState(true);
+  const [loadingLocs, setLoadingLocs] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Fetch categories
   useEffect(() => {
@@ -53,6 +57,26 @@ const Step1BasicInfo = () => {
     fetchCats();
   }, []);
 
+  // Fetch locations
+  useEffect(() => {
+    const fetchLocs = async () => {
+      const defaultLocs = ["Goa", "Jaipur", "Udaipur", "Mumbai", "Delhi", "Jodhpur", "Kerala", "Mussoorie", "Jim Corbett"];
+      try {
+        const data = await weddingService.getDestinations();
+        const apiLocs = data.map(d => d.name);
+        // Combine API locations with defaults and remove duplicates
+        const combined = [...new Set([...apiLocs, ...defaultLocs])];
+        setAvailableLocations(combined);
+      } catch (error) {
+        console.error("Failed to load locations", error);
+        setAvailableLocations(defaultLocs);
+      } finally {
+        setLoadingLocs(false);
+      }
+    };
+    fetchLocs();
+  }, []);
+
   // Auto-fill from Auth if vendor basicInfo is empty
   useEffect(() => {
     if (user && !basicInfo.name && !basicInfo.email) {
@@ -65,7 +89,7 @@ const Step1BasicInfo = () => {
     }
   }, [user, basicInfo.name, basicInfo.email, updateBasicInfo]);
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const newErrors = {};
     if (!basicInfo.name.trim()) newErrors.name = "Business name is required";
     if (!basicInfo.category) newErrors.category = "Please select a category";
@@ -78,7 +102,17 @@ const Step1BasicInfo = () => {
       setErrors(newErrors);
       return;
     }
-    navigate("/wedding/vendor/onboarding/step-2");
+
+    try {
+      setIsSubmitting(true);
+      // Save progress to backend so Admin can see the request immediately
+      await submitForm();
+      navigate("/wedding/vendor/onboarding/step-2");
+    } catch (error) {
+      toast.error("Failed to save progress. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const inputClass =
@@ -150,12 +184,13 @@ const Step1BasicInfo = () => {
                 <Select
                   value={basicInfo.location}
                   onValueChange={(val) => updateBasicInfo({ location: val })}
+                  disabled={loadingLocs}
                 >
                   <SelectTrigger className={`${inputClass} h-[50px] md:h-[52px]`}>
-                    <SelectValue placeholder="Select Location" />
+                    <SelectValue placeholder={loadingLocs ? "Loading..." : "Select Location"} />
                   </SelectTrigger>
                   <SelectContent position="popper" side="bottom" avoidCollisions={false} className="max-h-[200px] overflow-y-auto">
-                    {vendorLocations.map((loc) => (
+                    {availableLocations.map((loc) => (
                       <SelectItem key={loc} value={loc}>
                         {loc}
                       </SelectItem>
@@ -214,9 +249,19 @@ const Step1BasicInfo = () => {
           <div className="flex justify-end mt-8">
             <button
               onClick={handleNext}
-              className="flex items-center gap-2 px-6 py-3 rounded-full text-sm font-medium wedding-gradient text-background transition-all duration-300 hover:shadow-lg hover:scale-105"
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-8 py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:opacity-90 transition-all disabled:opacity-70"
             >
-              Next <ChevronRight className="w-4 h-4" />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  Next Step <ArrowRight className="w-4 h-4" />
+                </>
+              )}
             </button>
           </div>
         </div>

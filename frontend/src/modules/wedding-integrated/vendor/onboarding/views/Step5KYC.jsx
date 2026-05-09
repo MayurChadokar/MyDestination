@@ -3,18 +3,23 @@ import { useNavigate } from "react-router-dom";
 import { ChevronRight, ChevronLeft, Upload, FileCheck, AlertCircle, X } from "lucide-react";
 import ProgressBar from "../components/ProgressBar";
 import useVendorForm from "../../hooks/useVendorForm";
+import { fileToBase64 } from "../../../../../utils/fileUtils";
 
 const Step5KYC = () => {
   const navigate = useNavigate();
   const { kyc, updateKYC } = useVendorForm();
   const [errors, setErrors] = useState({});
 
-  const handleFileChange = (field, e) => {
+  const handleFileChange = async (field, e) => {
     const file = e.target.files[0];
     if (file) {
-      // For demo purposes, we'll store as a simulation URL
-      updateKYC({ [field]: URL.createObjectURL(file) });
-      setErrors(prev => ({ ...prev, [field]: null }));
+      try {
+        const base64 = await fileToBase64(file);
+        updateKYC({ [field]: base64 });
+        setErrors(prev => ({ ...prev, [field]: null }));
+      } catch (error) {
+        console.error("Failed to convert KYC file to base64", error);
+      }
     }
   };
 

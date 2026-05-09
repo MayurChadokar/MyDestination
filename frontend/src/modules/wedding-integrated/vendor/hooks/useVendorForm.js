@@ -1,5 +1,5 @@
 import { useVendorContext } from "../context/VendorContext";
-import { createVendor } from "../data/vendorApi";
+import { applyAsVendor } from "../data/vendorApi";
 
 const useVendorForm = () => {
   const ctx = useVendorContext();
@@ -31,7 +31,7 @@ const useVendorForm = () => {
   };
 
   /**
-   * Submit the full form via the fake API.
+   * Submit the full vendor application via the PUBLIC API (no auth required).
    */
   const submitForm = async () => {
     const payload = {
@@ -41,7 +41,7 @@ const useVendorForm = () => {
       pricing: ctx.pricing,
       kyc: ctx.kyc,
     };
-    const result = await createVendor(payload);
+    const result = await applyAsVendor(payload);
     if (result.success) {
       ctx.setStatus("pending");
     }

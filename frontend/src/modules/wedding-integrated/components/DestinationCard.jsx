@@ -1,16 +1,16 @@
-﻿import { Link } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { MapPin, Building2 } from "lucide-react";
 import { formatPrice } from "../data/weddingData";
 
 const DestinationCard = ({ destination }) => {
   return (
     <Link
-      to={`/wedding/destinations/${destination.id}`}
+      to={`/wedding/destinations/${destination._id || destination.id}`}
       className="group block w-full rounded-[1.5rem] overflow-hidden bg-white/40 backdrop-blur-md border border-pink-100/30 transition-all duration-500 hover:shadow-[0_20px_60px_-15px_rgba(157,49,61,0.2)] hover:bg-white"
     >
       <div className="relative overflow-hidden aspect-[2.2/1] sm:aspect-[1.8/1]">
         <img
-          src={destination.image}
+          src={destination.image || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=2070&auto=format&fit=crop'}
           alt={destination.name}
           loading="lazy"
           className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"

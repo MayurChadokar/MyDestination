@@ -40,6 +40,7 @@ const menuItems = [
   { icon: CreditCard, label: 'Financials', path: '/wedding/admin/financials' },
   { icon: MapPin, label: 'Destinations', path: '/wedding/admin/destinations' },
   { icon: Building2, label: 'Venue Approval', path: '/wedding/admin/venues' },
+  { icon: Palette, label: 'Categories', path: '/wedding/admin/categories' },
   { icon: Image, label: 'Real Weddings', path: '/wedding/admin/gallery' },
   { icon: LifeBuoy, label: 'Support', path: '/wedding/admin/support' },
   {

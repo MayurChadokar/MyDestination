@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const weddingDestinationSchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true },
+  slug: { type: String, required: true, unique: true },
   location: { type: String },
   category: { type: String, enum: ['Heritage', 'Beach', 'Hill', 'Resort'], default: 'Heritage' },
   startingPrice: { type: Number },

@@ -33,8 +33,20 @@ export const VendorProvider = ({ children }) => {
       const saved = localStorage.getItem(DRAFT_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Restore all fields, but keep portfolio as URLs (blobs don't survive refresh)
-        return { ...defaultState, ...parsed, portfolio: parsed.portfolio || [] };
+        
+        // Clean up invalid blob URLs that don't survive refresh
+        const cleanPortfolio = (parsed.portfolio || []).filter(src => typeof src === 'string' && !src.startsWith('blob:'));
+        const cleanKYC = { ...parsed.kyc };
+        if (cleanKYC.aadhar?.startsWith('blob:')) cleanKYC.aadhar = null;
+        if (cleanKYC.pan?.startsWith('blob:')) cleanKYC.pan = null;
+        if (cleanKYC.photo?.startsWith('blob:')) cleanKYC.photo = null;
+
+        return { 
+          ...defaultState, 
+          ...parsed, 
+          portfolio: cleanPortfolio,
+          kyc: cleanKYC
+        };
       }
     } catch (e) {
       // Ignore parse errors

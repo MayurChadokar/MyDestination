@@ -1,4 +1,5 @@
-﻿import { Link } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   MapPin,
   Eye,
@@ -14,11 +15,11 @@ import HeroSection from "../components/HeroSection";
 import DestinationCard from "../components/DestinationCard";
 import TestimonialSlider from "../components/TestimonialSlider";
 import ScrollReveal from "../components/ScrollReveal";
-import { destinations as staticDestinations, budgetBuckets } from "../data/weddingData";
-import { getAllDestinations } from "../services/storage";
+import { weddingService } from "../../../services/weddingService";
+import { weddingVendorService } from "../../../services/apiService";
+import PlannerCard from "../components/PlannerCard";
+import { budgetBuckets } from "../data/weddingData";
 import StackedCarousel from "../components/StackedCarousel";
-
-const allDestinations = getAllDestinations();
 
 const steps = [
   {
@@ -71,6 +72,38 @@ const whyUs = [
 ];
 
 const WeddingHomePage = () => {
+  const [allDestinations, setAllDestinations] = useState([]);
+  const [topPlanners, setTopPlanners] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isPlannersLoading, setIsPlannersLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchDestinations = async () => {
+      try {
+        const data = await weddingService.getDestinations();
+        setAllDestinations(data || []);
+      } catch (error) {
+        console.error("Failed to fetch destinations:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    const fetchPlanners = async () => {
+      try {
+        setIsPlannersLoading(true);
+        const data = await weddingVendorService.getPublicVendors({ category: 'Planner' });
+        setTopPlanners(data.slice(0, 3) || []);
+      } catch (error) {
+        console.error("Failed to fetch planners:", error);
+      } finally {
+        setIsPlannersLoading(false);
+      }
+    };
+
+    fetchDestinations();
+    fetchPlanners();
+  }, []);
   return (
     <div className="overflow-x-hidden">
       <HeroSection />
@@ -119,7 +152,7 @@ const WeddingHomePage = () => {
             <div className="flex gap-6 overflow-x-auto overflow-y-hidden pb-6 snap-x snap-mandatory no-scrollbar scroll-smooth">
               {allDestinations.slice(0, 5).map((dest, i) => (
                 <ScrollReveal
-                  key={dest.id}
+                  key={dest._id || dest.id}
                   delay={i * 100}
                   className="min-w-[280px] sm:min-w-[320px] snap-start"
                 >
@@ -146,6 +179,44 @@ const WeddingHomePage = () => {
           </div>
         </div>
       </section>
+
+      {/* Recommended Planners */}
+      {topPlanners.length > 0 && (
+        <section className="py-12 md:py-20 px-4 bg-white">
+          <div className="max-w-7xl mx-auto">
+            <ScrollReveal>
+              <div className="text-center mb-10 md:mb-16">
+                <p className="text-sm uppercase tracking-[0.2em] text-primary mb-3">
+                  Expert Guidance
+                </p>
+                <h2
+                  className="text-3xl md:text-5xl font-bold"
+                  style={{ fontFamily: "'Playfair Display', serif" }}
+                >
+                  Recommended Planners
+                </h2>
+              </div>
+            </ScrollReveal>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {topPlanners.map((planner, i) => (
+                <ScrollReveal key={planner._id || planner.id} delay={i * 100}>
+                  <PlannerCard planner={planner} />
+                </ScrollReveal>
+              ))}
+            </div>
+
+            <div className="text-center mt-12">
+              <Link
+                to="/wedding/planners"
+                className="inline-block px-8 py-3 rounded-full text-sm font-medium bg-primary text-white transition-all duration-300 hover:shadow-xl hover:scale-105"
+              >
+                Find More Planners
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Why Choose Us */}
       <section className="pt-0 pb-6 px-4">
@@ -204,9 +275,9 @@ const WeddingHomePage = () => {
 
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4 sm:gap-6">
             {allDestinations.slice(0, 6).map((dest, i) => (
-              <ScrollReveal key={dest.id} delay={i * 80}>
+              <ScrollReveal key={dest._id || dest.id} delay={i * 80}>
                 <Link
-                  to={`/wedding/real-weddings/by-location/${dest.id}`}
+                  to={`/wedding/real-weddings/by-location/${dest._id || dest.id}`}
                   className="group relative block aspect-[3/2] rounded-[1.25rem] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500"
                 >
                   <img

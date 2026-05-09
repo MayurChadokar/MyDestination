@@ -22,12 +22,13 @@ const DestinationsPage = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [destData, catData] = await Promise.all([
-        weddingDestinationService.getAll(),
-        weddingDestinationService.getCategories()
-      ]);
+      const destData = await weddingDestinationService.getAll();
+      
+      // Extract unique categories from the destinations data
+      const uniqueCats = Array.from(new Set(destData.map(d => d.category).filter(Boolean)));
+      
       setDestinations(destData);
-      setCategories(["All", ...catData]);
+      setCategories(["All", ...uniqueCats]);
     } catch (error) {
       console.error("Failed to fetch destinations", error);
     } finally {
@@ -39,7 +40,7 @@ const DestinationsPage = () => {
     const matchCat = active === "All" || d.category === active;
     const matchSearch =
       d.name.toLowerCase().includes(search.toLowerCase()) ||
-      d.location.toLowerCase().includes(search.toLowerCase());
+      (d.location && d.location.toLowerCase().includes(search.toLowerCase()));
     
     let matchBudget = true;
     if (budgetParam === "Intimate") matchBudget = d.startingPrice <= 1500000;

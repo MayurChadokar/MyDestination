@@ -25,6 +25,10 @@ const io = new Server(server, {
     origin: process.env.FRONTEND_URL || [
       'http://localhost:5173',
       'http://127.0.0.1:5173',
+      'http://localhost:5174',
+      'http://127.0.0.1:5174',
+      'http://localhost:5175',
+      'http://127.0.0.1:5175',
       'https://rukkoo.in',
       'https://www.rukkoo.in',
       'https://rukkoo-project.vercel.app'
@@ -78,6 +82,10 @@ app.use(cors({
     const allowedOrigins = [
       'http://localhost:5173',
       'http://127.0.0.1:5173',
+      'http://localhost:5174',
+      'http://127.0.0.1:5174',
+      'http://localhost:5175',
+      'http://127.0.0.1:5175',
       'https://rukkoo.in',
       'https://www.rukkoo.in',
       'https://rukkoo-project.vercel.app',
@@ -173,10 +181,12 @@ const mongoOptions = {
 const connectWithRetry = async (retries = 5, delay = 5000) => {
   for (let i = 0; i < retries; i++) {
     try {
+      const maskedUri = process.env.MONGODB_URL?.replace(/:([^@]+)@/, ':****@');
       console.log(`🔄 Attempting MongoDB connection... (Attempt ${i + 1}/${retries})`);
+      console.log(`📍 Connecting to: ${maskedUri}`);
 
       await mongoose.connect(
-        process.env.MONGODB_URL || "mongodb+srv://rukkooin:rukkooin@cluster0.6mzfrnp.mongodb.net/?appName=Cluster0",
+        process.env.MONGODB_URL,
         mongoOptions
       );
 

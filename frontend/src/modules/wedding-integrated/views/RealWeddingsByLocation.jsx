@@ -1,22 +1,32 @@
-﻿import React from "react";
+import React, { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
-import { realWeddings as staticRealWeddings } from "../data/weddingData";
-import { getAdminRealWeddings } from "../services/storage";
+import { weddingService } from "../../../services/weddingService";
 import RealWeddingCardDetailed from "../components/RealWeddingCardDetailed";
 import ScrollReveal from "../components/ScrollReveal";
 
 const RealWeddingsByLocation = () => {
   const { destinationId } = useParams();
-  
-  const allRealWeddings = React.useMemo(() => {
-    const adminWeddings = getAdminRealWeddings();
-    return [...staticRealWeddings, ...adminWeddings];
-  }, []);
+  const [filteredWeddings, setFilteredWeddings] = React.useState([]);
+  const [loading, setLoading] = React.useState(true);
 
-  const filteredWeddings = allRealWeddings.filter(
-    (w) => w.destinationId?.toLowerCase() === destinationId?.toLowerCase()
-  );
+  useEffect(() => {
+    const fetchWeddings = async () => {
+      try {
+        setLoading(true);
+        const data = await weddingService.getRealWeddings();
+        const filtered = data.filter(
+          (w) => (w.destinationId?.toLowerCase() === destinationId?.toLowerCase() || w.location?.toLowerCase() === destinationId?.toLowerCase())
+        );
+        setFilteredWeddings(filtered);
+      } catch (error) {
+        console.error("Failed to fetch real weddings", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWeddings();
+  }, [destinationId]);
 
   const destinationName = filteredWeddings.length > 0 ? filteredWeddings[0].location : destinationId;
 
@@ -54,25 +64,31 @@ const RealWeddingsByLocation = () => {
         </div>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredWeddings.length > 0 ? (
-            filteredWeddings.map((wedding, i) => (
-              <ScrollReveal key={wedding.id} delay={i * 100}>
-                <RealWeddingCardDetailed wedding={wedding} />
-              </ScrollReveal>
-            ))
-          ) : (
-            <div className="col-span-full py-20 text-center bg-white rounded-[2rem] border border-dashed border-slate-200">
-              <p className="text-lg text-muted-foreground font-medium">
-                No real wedding stories found for this location yet. 
-                Stay tuned for upcoming inspirations!
-              </p>
-              <Link to="/wedding" className="inline-block mt-6 text-primary font-bold hover:underline">
-                Explore other destinations
-              </Link>
-            </div>
-          )}
-        </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-20">
+            <div className="w-10 h-10 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredWeddings.length > 0 ? (
+              filteredWeddings.map((wedding, i) => (
+                <ScrollReveal key={wedding.id || wedding._id} delay={i * 100}>
+                  <RealWeddingCardDetailed wedding={wedding} />
+                </ScrollReveal>
+              ))
+            ) : (
+              <div className="col-span-full py-20 text-center bg-white rounded-[2rem] border border-dashed border-slate-200">
+                <p className="text-lg text-muted-foreground font-medium">
+                  No real wedding stories found for this location yet. 
+                  Stay tuned for upcoming inspirations!
+                </p>
+                <Link to="/wedding" className="inline-block mt-6 text-primary font-bold hover:underline">
+                  Explore other destinations
+                </Link>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

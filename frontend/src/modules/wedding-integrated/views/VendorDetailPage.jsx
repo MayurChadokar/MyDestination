@@ -11,6 +11,7 @@ import {
   weddingVenueService,
   weddingReviewService 
 } from "../../../services/apiService";
+import { weddingService } from "../../../services/weddingService";
 import toast from "react-hot-toast";
 
 /* --- Lightbox --- */
@@ -93,6 +94,14 @@ const VendorDetailPage = () => {
     };
     fetchData();
   }, [vendorId]);
+
+  useEffect(() => {
+    if (vendor) {
+      const type = (vendor.isVenue || vendor.capacity) ? 'venue' : 'vendor';
+      weddingService.incrementView(type, vendorId || vendor._id)
+        .catch(err => console.error("View increment failed", err));
+    }
+  }, [vendor]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -257,20 +266,26 @@ const ReviewsTab = ({ vendor, reviews }) => {
   const [starRating, setStarRating] = useState(0);
   const [hoverStar, setHoverStar] = useState(0);
   const [comment, setComment] = useState("");
+  const [reviewName, setReviewName] = useState("");
+  const [reviewEmail, setReviewEmail] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const handleReviewSubmit = async () => {
-    if (starRating === 0 || !comment.trim()) return toast.error("Rating and comment required");
+    if (starRating === 0 || !comment.trim() || !reviewName.trim() || !reviewEmail.trim()) {
+      return toast.error("Rating, Name, Email, and Comment are required");
+    }
     try {
       setSubmitting(true);
       await weddingReviewService.createReview({
         targetId: vendor._id,
         targetType: vendor.capacity ? "Venue" : "Vendor",
         rating: starRating,
-        comment
+        comment,
+        name: reviewName,
+        email: reviewEmail
       });
       toast.success("Review submitted!");
-      setStarRating(0); setComment("");
+      setStarRating(0); setComment(""); setReviewName(""); setReviewEmail("");
     } catch (err) {
       toast.error(err.message);
     } finally {
@@ -310,7 +325,7 @@ const ReviewsTab = ({ vendor, reviews }) => {
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center"><User className="w-5 h-5 text-slate-400" /></div>
                 <div>
-                  <div className="text-sm font-bold">{r.userName}</div>
+                  <div className="text-sm font-bold">{r.name || r.userName || "Customer"}</div>
                   <div className="text-[10px] text-slate-400">{new Date(r.createdAt).toLocaleDateString()}</div>
                 </div>
               </div>
@@ -325,6 +340,7 @@ const ReviewsTab = ({ vendor, reviews }) => {
             )}
           </div>
         ))}
+        {reviews.length === 0 && <p className="text-slate-400 italic">No reviews yet. Be the first to review!</p>}
       </div>
 
       <div className="bg-slate-50 rounded-2xl p-6 border border-slate-100">
@@ -335,6 +351,10 @@ const ReviewsTab = ({ vendor, reviews }) => {
               <Star className={`w-6 h-6 ${(hoverStar || starRating) >= s ? "fill-primary text-primary" : "text-slate-300"}`} />
             </button>
           ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <input type="text" placeholder="Your Name" value={reviewName} onChange={e => setReviewName(e.target.value)} className="w-full p-3 bg-white rounded-xl text-sm border-none focus:ring-1 focus:ring-primary" />
+          <input type="email" placeholder="Your Email" value={reviewEmail} onChange={e => setReviewEmail(e.target.value)} className="w-full p-3 bg-white rounded-xl text-sm border-none focus:ring-1 focus:ring-primary" />
         </div>
         <textarea placeholder="Your experience..." className="w-full p-4 bg-white rounded-xl text-sm border-none focus:ring-1 focus:ring-primary min-h-[100px] mb-4" value={comment} onChange={e => setComment(e.target.value)} />
         <button onClick={handleReviewSubmit} disabled={submitting} className="px-8 py-3 bg-primary text-white font-bold rounded-xl text-sm shadow-md disabled:opacity-50">

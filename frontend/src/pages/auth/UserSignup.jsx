@@ -166,7 +166,7 @@ const UserSignup = () => {
                 <div className="max-w-sm mx-auto h-full flex flex-col px-8 pt-4">
                     <div className="mb-4 text-center">
                         <h2 className="text-2xl font-black text-[#39593f]">Create Account</h2>
-                        <p className="text-[#A3B18A] text-xs font-bold mt-1 tracking-tight">Join Rukkoo.in & Start Your Journey</p>
+                        <p className="text-[#A3B18A] text-xs font-bold mt-1 tracking-tight">Join My Destination & Start Your Journey</p>
                     </div>
 
                     <AnimatePresence mode="wait">

@@ -91,6 +91,22 @@ const WeddingLayout = () => {
   const isBookingDetail = location.pathname.match(/\/wedding\/bookings\/bk-\d+/);
   const hideNav = isGallery || isBookingDetail;
 
+  const [footerDestinations, setFooterDestinations] = useState([]);
+
+  useEffect(() => {
+    const fetchFooterData = async () => {
+      try {
+        const data = await weddingService.getDestinations();
+        if (Array.isArray(data)) {
+          setFooterDestinations(data.slice(0, 6));
+        }
+      } catch (error) {
+        console.error("Footer fetch error", error);
+      }
+    };
+    fetchFooterData();
+  }, []);
+
   // Hide the main app's navbars when wedding module is active
   useEffect(() => {
     window.dispatchEvent(new CustomEvent('rukkoo:slider', { detail: true }));
@@ -289,9 +305,9 @@ const WeddingLayout = () => {
               <div>
                 <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider">Destinations</h4>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm opacity-70">
-                  {["Goa", "Jaipur", "Udaipur", "Kerala", "Rishikesh"].map((d) => (
-                    <Link key={d} to={`/wedding/destinations/${d.toLowerCase()}`} className="block hover:opacity-100 transition-opacity">
-                      {d}
+                  {(footerDestinations.length > 0 ? footerDestinations : [{ name: "Goa" }, { name: "Jaipur" }, { name: "Udaipur" }, { name: "Kerala" }, { name: "Rishikesh" }]).map((d) => (
+                    <Link key={d._id || d.name} to={`/wedding/destinations/${d._id || d.name.toLowerCase()}`} className="block hover:opacity-100 transition-opacity">
+                      {d.name}
                     </Link>
                   ))}
                 </div>

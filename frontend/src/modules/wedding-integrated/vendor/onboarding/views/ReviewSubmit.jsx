@@ -12,20 +12,32 @@ import {
   ShieldCheck,
   FileCheck,
 } from "lucide-react";
+import toast from "react-hot-toast";
 import ProgressBar from "../components/ProgressBar";
 import useVendorForm from "../../hooks/useVendorForm";
+import { useAuth } from "../../context/AuthContext";
 
 const ReviewSubmit = () => {
   const navigate = useNavigate();
-  const { basicInfo, portfolio, services, pricing, kyc, submitForm } = useVendorForm();
+  const { basicInfo, portfolio, services, pricing, kyc, submitForm, resetForm } = useVendorForm();
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      await submitForm();
-      navigate("/wedding/vendor/dashboard");
-    } catch {
+      const res = await submitForm();
+      if (res.success) {
+        toast.success("Application submitted successfully! 🎉");
+        resetForm(); // Clear the draft
+        navigate("/wedding/vendor/pending-approval");
+      } else {
+        toast.error(res.error || res.message || "Failed to submit application");
+        setLoading(false);
+      }
+    } catch (error) {
+      console.error("Submit error:", error);
+      toast.error("An error occurred during submission. Please try again.");
       setLoading(false);
     }
   };

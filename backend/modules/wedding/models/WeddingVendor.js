@@ -39,6 +39,9 @@ const weddingVendorSchema = new mongoose.Schema({
     whatsapp: { type: Boolean, default: true }
   },
   rating: { type: Number, default: 0 },
+  about: { type: String },
+  views: { type: Number, default: 0 },
+  shortlistCount: { type: Number, default: 0 },
   isVerified: { type: Boolean, default: false },
   status: { type: String, enum: ['draft', 'pending', 'active', 'inactive'], default: 'draft' }
 }, { timestamps: true });

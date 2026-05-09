@@ -12,9 +12,24 @@ export const api = axios.create({
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   const adminToken = localStorage.getItem('adminToken');
+  const vendorToken = localStorage.getItem('vendor_token');
+  const adminWeddingToken = localStorage.getItem('admin_token');
 
-  // Preference to adminToken if on /admin path, else normal token
-  const effectiveToken = window.location.pathname.startsWith('/admin') ? (adminToken || token) : (token || adminToken);
+  let effectiveToken;
+  const path = window.location.pathname;
+
+  if (path.startsWith('/wedding/vendor')) {
+    // Wedding vendor routes — prefer vendor_token
+    effectiveToken = vendorToken || token;
+  } else if (path.startsWith('/wedding/admin')) {
+    // Wedding admin routes — prefer admin_token
+    effectiveToken = adminWeddingToken || adminToken || token;
+  } else if (path.startsWith('/admin')) {
+    // Main admin routes
+    effectiveToken = adminToken || token;
+  } else {
+    effectiveToken = token || adminToken;
+  }
 
   if (effectiveToken) {
     config.headers.Authorization = `Bearer ${effectiveToken}`;
@@ -957,6 +972,14 @@ export const weddingEnquiryService = {
   createEnquiry: async (data) => {
     try {
       const response = await api.post('/wedding/enquiry', data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+  getMyEnquiries: async () => {
+    try {
+      const response = await api.get('/wedding/my-enquiries');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

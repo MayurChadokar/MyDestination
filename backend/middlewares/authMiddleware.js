@@ -62,9 +62,12 @@ export const protect = async (req, res, next) => {
 
 export const authorizedRoles = (...roles) => {
   return (req, res, next) => {
+    console.log(`🔐 Role Check - Required: [${roles}], User Has: ${req.user.role}`);
     if (!roles.includes(req.user.role)) {
+      console.warn(`🚫 Role Check FAILED for user ${req.user.name}`);
       return res.status(403).json({ message: `User role ${req.user.role} is not authorized to access this route` });
     }
+    console.log(`✅ Role Check PASSED`);
     next();
   };
 };

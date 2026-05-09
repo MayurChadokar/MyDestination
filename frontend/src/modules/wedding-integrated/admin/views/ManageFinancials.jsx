@@ -1,5 +1,5 @@
-﻿import React from 'react';
-import { mockFinancials } from '../data/adminMockData';
+import { useState, useEffect } from 'react';
+import { weddingService } from '../../../../services/weddingService';
 import { adminStyles } from '../theme/themeConfig';
 import { 
   TrendingUp, 
@@ -9,10 +9,63 @@ import {
   Calendar,
   Filter,
   Download,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from 'lucide-react';
 
 const ManageFinancials = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await weddingService.getAdminFinancials();
+        setData(response);
+      } catch (err) {
+        console.error('Error fetching financials:', err);
+        setError(err.message || 'Failed to fetch financial data');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <Loader2 className="w-10 h-10 animate-spin text-[hsl(353,45%,35%)]" />
+        <p className="text-gray-500 font-medium">Loading financial records...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8 bg-red-50 border border-red-100 rounded-3xl text-center">
+        <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
+        <h3 className="text-lg font-bold text-red-800">Error</h3>
+        <p className="text-red-600">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="mt-4 px-6 py-2 bg-red-600 text-white rounded-xl font-bold"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
+
+  const financials = data || {
+    totalRevenue: '₹0 L',
+    commissionsEarned: '₹0 L',
+    pendingPayouts: '₹0 L',
+    netProfit: '₹0 L',
+    recentTransactions: []
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <div className="flex flex-col gap-4">
@@ -35,10 +88,10 @@ const ManageFinancials = () => {
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
          {[
-           { label: 'Total Revenue', value: mockFinancials.totalRevenue, icon: TrendingUp, color: 'bg-blue-50 text-blue-600', trend: '+12.5%' },
-           { label: 'Commissions', value: mockFinancials.commissionsEarned, icon: IndianRupee, color: 'bg-green-50 text-green-600', trend: '+18.2%' },
-           { label: 'Pending Payouts', value: mockFinancials.pendingPayouts, icon: CreditCard, color: 'bg-orange-50 text-orange-600', trend: 'Requires attention' },
-           { label: 'Net Profit', value: mockFinancials.netProfit, icon: ArrowUpRight, color: 'bg-purple-50 text-purple-600', trend: '+14.1%' },
+           { label: 'Total Revenue', value: financials.totalRevenue, icon: TrendingUp, color: 'bg-blue-50 text-blue-600', trend: '+0%' },
+           { label: 'Commissions', value: financials.commissionsEarned, icon: IndianRupee, color: 'bg-green-50 text-green-600', trend: '+0%' },
+           { label: 'Pending Payouts', value: financials.pendingPayouts, icon: CreditCard, color: 'bg-orange-50 text-orange-600', trend: 'Requires attention' },
+           { label: 'Net Profit', value: financials.netProfit, icon: ArrowUpRight, color: 'bg-purple-50 text-purple-600', trend: '+0%' },
          ].map((stat, i) => (
            <div key={i} className={`${adminStyles.glassCard} p-6 rounded-3xl group hover:shadow-xl transition-all duration-300`}>
               <div className="flex justify-between items-start mb-4">
@@ -75,10 +128,10 @@ const ManageFinancials = () => {
                      </tr>
                   </thead>
                   <tbody className="divide-y divide-[hsl(353,45%,35%)]/5">
-                     {mockFinancials.recentTransactions.map((txn) => (
+                     {financials.recentTransactions.length > 0 ? financials.recentTransactions.map((txn) => (
                        <tr key={txn.id} className="group hover:bg-white/40 transition-all duration-300">
                           <td className="py-5">
-                             <p className="font-bold text-sm text-[hsl(353,20%,15%)]">{txn.id}</p>
+                             <p className="font-bold text-sm text-[hsl(353,20%,15%)]">{txn.id.substring(0, 8)}...</p>
                              <p className="text-xs text-gray-400">{txn.date}</p>
                           </td>
                           <td className="py-5">
@@ -99,7 +152,13 @@ const ManageFinancials = () => {
                              </span>
                           </td>
                        </tr>
-                     ))}
+                     )) : (
+                       <tr>
+                         <td colSpan="4" className="py-10 text-center text-gray-500 font-medium">
+                           No transactions recorded yet.
+                         </td>
+                       </tr>
+                     )}
                   </tbody>
                </table>
             </div>

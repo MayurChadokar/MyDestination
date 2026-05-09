@@ -156,16 +156,20 @@ const WeddingManageRealWeddings = React.lazy(() => import('./modules/wedding-int
 const WeddingAdminProfile = React.lazy(() => import('./modules/wedding-integrated/admin/views/AdminProfile'));
 const WeddingAdminSettings = React.lazy(() => import('./modules/wedding-integrated/admin/views/AdminSettings'));
 const WeddingManageSupport = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageSupport'));
+const WeddingManageCategories = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageCategories'));
 
 // Lazy Imports - Wedding Vendor Module
-const WeddingVendorOnboardingLayout = React.lazy(() => import('./modules/wedding-integrated/vendor/components/VendorLayout'));
-const WeddingVendorStep1BasicInfo = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step1BasicInfo'));
-const WeddingVendorStep2Portfolio = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step2Portfolio'));
-const WeddingVendorStep3Services = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step3Services'));
-const WeddingVendorStep4Pricing = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step4Pricing'));
-const WeddingVendorStep5KYC = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step5KYC'));
-const WeddingVendorReviewSubmit = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/ReviewSubmit'));
-const WeddingVendorDashboardHome = React.lazy(() => import('./modules/wedding-integrated/vendor/panel/views/DashboardHome'));
+const WeddingVendorOnboardingLayout = React.lazy(() => import('./modules/wedding-integrated/vendor/components/VendorOnboardingLayout'));
+const WeddingVendorLogin = React.lazy(() => import('./modules/wedding-integrated/vendor/auth/views/VendorLogin'));
+const WeddingVendorSignup = React.lazy(() => import('./modules/wedding-integrated/vendor/auth/views/VendorSignup'));
+const WeddingVendorOnboardingStep1 = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step1BasicInfo'));
+const WeddingVendorOnboardingStep2 = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step2Portfolio'));
+const WeddingVendorOnboardingStep3 = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step3Services'));
+const WeddingVendorOnboardingStep4 = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step4Pricing'));
+const WeddingVendorOnboardingStep5 = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/Step5KYC'));
+const WeddingVendorOnboardingReview = React.lazy(() => import('./modules/wedding-integrated/vendor/onboarding/views/ReviewSubmit'));
+const WeddingVendorDashboard = React.lazy(() => import('./modules/wedding-integrated/vendor/panel/views/DashboardHome'));
+const WeddingVendorPendingApproval = React.lazy(() => import('./modules/wedding-integrated/vendor/auth/views/VendorPendingApproval'));
 const WeddingVendorProfileEditor = React.lazy(() => import('./modules/wedding-integrated/vendor/panel/views/ProfileEditor'));
 const WeddingVendorWorkManager = React.lazy(() => import('./modules/wedding-integrated/vendor/panel/views/WorkManager'));
 const WeddingVendorLeadsInbox = React.lazy(() => import('./modules/wedding-integrated/vendor/panel/views/LeadsInbox'));
@@ -401,6 +405,32 @@ const PartnerProtectedRoute = ({ children }) => {
     }
   }
 
+  return children ? children : <Outlet />;
+};
+
+// Wedding Vendor Protected Route
+const WeddingVendorProtectedRoute = ({ children }) => {
+  const token = localStorage.getItem('token');
+  const userRaw = localStorage.getItem('user');
+  const vendorUserRaw = localStorage.getItem('vendor_user');
+  const user = userRaw ? JSON.parse(userRaw) : (vendorUserRaw ? JSON.parse(vendorUserRaw) : null);
+  const location = useLocation();
+
+  if (!token || !user) {
+    return <Navigate to="/wedding/vendor/login" state={{ from: location }} replace />;
+  }
+
+  // If user is logged in but not a vendor, they might need to onboard
+  if (user.role !== 'vendor') {
+    return <Navigate to="/wedding/vendor/onboarding" replace />;
+  }
+
+  // If vendor is rejected, block them
+  if (user.partnerApprovalStatus === 'rejected') {
+    return <Navigate to="/wedding/vendor/pending-approval" replace />;
+  }
+
+  // Allow 'approved' and 'pending' vendors to access their dashboard
   return children ? children : <Outlet />;
 };
 
@@ -692,6 +722,7 @@ function App() {
               <Route path="financials" element={<WeddingManageFinancials />} />
               <Route path="destinations" element={<WeddingManageDestinations />} />
               <Route path="venues" element={<WeddingManageVenues />} />
+              <Route path="categories" element={<WeddingManageCategories />} />
               <Route path="gallery" element={<WeddingManageRealWeddings />} />
               <Route path="support" element={<WeddingManageSupport />} />
               <Route path="profile" element={<WeddingAdminProfile />} />
@@ -700,31 +731,34 @@ function App() {
 
             {/* Wedding Vendor Module Routes */}
             <Route element={<WeddingVendorAuthProvider><WeddingVendorProvider><Outlet /></WeddingVendorProvider></WeddingVendorAuthProvider>}>
-              <Route path="/wedding/vendor/login" element={<WeddingVendorAuthLogin />} />
-              <Route path="/wedding/vendor/signup" element={<WeddingVendorAuthSignup />} />
+              <Route path="/wedding/vendor/login" element={<WeddingVendorLogin />} />
+              <Route path="/wedding/vendor/signup" element={<WeddingVendorSignup />} />
+              <Route path="/wedding/vendor/pending-approval" element={<WeddingVendorPendingApproval />} />
 
               {/* Vendor Onboarding (Integrated) */}
               <Route path="/wedding/vendor/onboarding" element={<WeddingVendorOnboardingLayout />}>
                 <Route index element={<Navigate to="step-1" replace />} />
-                <Route path="step-1" element={<WeddingVendorStep1BasicInfo />} />
-                <Route path="step-2" element={<WeddingVendorStep2Portfolio />} />
-                <Route path="step-3" element={<WeddingVendorStep3Services />} />
-                <Route path="step-4" element={<WeddingVendorStep4Pricing />} />
-                <Route path="step-5" element={<WeddingVendorStep5KYC />} />
-                <Route path="review" element={<WeddingVendorReviewSubmit />} />
+                <Route path="step-1" element={<WeddingVendorOnboardingStep1 />} />
+                <Route path="step-2" element={<WeddingVendorOnboardingStep2 />} />
+                <Route path="step-3" element={<WeddingVendorOnboardingStep3 />} />
+                <Route path="step-4" element={<WeddingVendorOnboardingStep4 />} />
+                <Route path="step-5" element={<WeddingVendorOnboardingStep5 />} />
+                <Route path="review" element={<WeddingVendorOnboardingReview />} />
               </Route>
 
-              {/* Vendor Main Dashboard (Integrated) */}
-              <Route path="/wedding/vendor" element={<WeddingVendorOnboardingLayout />}>
-                <Route index element={<Navigate to="dashboard" replace />} />
-                <Route path="dashboard" element={<WeddingVendorDashboardHome />} />
-                <Route path="profile" element={<WeddingVendorProfileEditor />} />
-                <Route path="work" element={<WeddingVendorWorkManager />} />
-                <Route path="leads" element={<WeddingVendorLeadsInbox />} />
-                <Route path="reviews" element={<WeddingVendorReviewsManager />} />
-                <Route path="settings" element={<WeddingVendorSettings />} />
-                <Route path="venues/my" element={<WeddingVendorMyVenues />} />
-                <Route path="venues/add" element={<WeddingVendorAddVenue />} />
+              {/* Vendor Main Dashboard (Protected) */}
+              <Route element={<WeddingVendorProtectedRoute />}>
+                <Route path="/wedding/vendor" element={<WeddingVendorOnboardingLayout />}>
+                  <Route index element={<Navigate to="dashboard" replace />} />
+                  <Route path="dashboard" element={<WeddingVendorDashboard />} />
+                  <Route path="profile" element={<WeddingVendorProfileEditor />} />
+                  <Route path="work" element={<WeddingVendorWorkManager />} />
+                  <Route path="leads" element={<WeddingVendorLeadsInbox />} />
+                  <Route path="reviews" element={<WeddingVendorReviewsManager />} />
+                  <Route path="settings" element={<WeddingVendorSettings />} />
+                  <Route path="venues/my" element={<WeddingVendorMyVenues />} />
+                  <Route path="venues/add" element={<WeddingVendorAddVenue />} />
+                </Route>
               </Route>
             </Route>
 

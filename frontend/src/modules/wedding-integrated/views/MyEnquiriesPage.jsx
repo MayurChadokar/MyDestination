@@ -1,45 +1,28 @@
-﻿import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { MessageSquare, ArrowLeft, Calendar, Mail, Phone, MapPin } from "lucide-react";
-import { getEnquiries } from "../data/weddingData";
+import { MessageSquare, ArrowLeft, Calendar, Mail, Phone, MapPin, Loader2 } from "lucide-react";
+import { weddingEnquiryService } from "../../../services/apiService";
 import ScrollReveal from "../components/ScrollReveal";
 
 const MyEnquiriesPage = () => {
   const [enquiries, setEnquiries] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    let localData = getEnquiries();
-    if (localData.length === 0) {
-      // Dummy data for premium UI demonstration
-      localData = [
-        {
-          id: 1,
-          destination: "Udaipur",
-          date: "Oct 2026",
-          guests: "250",
-          name: "Sagar Chouhan",
-          email: "sagar@example.com",
-          phone: "+91 9876543210",
-          questions: "I would like to know the cost of the royal lakeside venue with full catering and decor for a 2-day wedding.",
-          createdAt: new Date().toISOString(),
-          status: "Under Review"
-        },
-        {
-          id: 2,
-          destination: "Goa",
-          date: "Jan 2027",
-          guests: "150",
-          name: "Sagar Chouhan",
-          email: "sagar@example.com",
-          phone: "+91 9876543210",
-          questions: "Looking for a quiet beach wedding, mostly intimate. What packages start from ₹15L?",
-          createdAt: new Date(Date.now() - 86400000 * 3).toISOString(), // 3 days ago
-          status: "Replied"
-        }
-      ];
-    }
-    setEnquiries(localData);
+    fetchEnquiries();
   }, []);
+
+  const fetchEnquiries = async () => {
+    try {
+      setLoading(true);
+      const data = await weddingEnquiryService.getMyEnquiries();
+      setEnquiries(data || []);
+    } catch (error) {
+      console.error("Failed to fetch enquiries", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getStatusBadge = (status) => {
     switch (status) {
@@ -79,10 +62,15 @@ const MyEnquiriesPage = () => {
         </div>
 
         {/* List of Enquiries */}
-        {enquiries.length > 0 ? (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="w-10 h-10 animate-spin text-primary" />
+            <p className="text-slate-500 font-medium">Fetching your enquiries...</p>
+          </div>
+        ) : enquiries.length > 0 ? (
           <div className="space-y-6">
             {enquiries.map((enq, index) => (
-              <ScrollReveal key={enq.id} delay={index * 100}>
+              <ScrollReveal key={enq._id} delay={index * 100}>
                 <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 overflow-hidden relative group hover:shadow-xl transition-shadow duration-500">
                   <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 border-b border-slate-100 pb-5 mb-5">
                     <div className="space-y-1">
@@ -93,7 +81,7 @@ const MyEnquiriesPage = () => {
                         </span>
                       </div>
                       <h3 className="text-xl md:text-2xl font-black text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
-                        Enquiry for {enq.date}
+                        Enquiry for {enq.weddingDate}
                       </h3>
                       <p className="text-xs text-slate-400 font-medium">
                         Submitted on {new Date(enq.createdAt).toLocaleDateString()}
@@ -110,7 +98,7 @@ const MyEnquiriesPage = () => {
                     <div className="space-y-3">
                       <div className="flex items-center gap-3 text-sm text-slate-600 font-medium">
                         <div className="p-1.5 bg-slate-50 text-slate-400 rounded-lg"><Calendar className="w-4 h-4"/></div>
-                        <span>Date: <span className="text-slate-900 font-semibold">{enq.date}</span></span>
+                        <span>Date: <span className="text-slate-900 font-semibold">{enq.weddingDate}</span></span>
                       </div>
                       <div className="flex items-center gap-3 text-sm text-slate-600 font-medium">
                         <div className="p-1.5 bg-slate-50 text-slate-400 rounded-lg"><Mail className="w-4 h-4"/></div>
@@ -127,7 +115,7 @@ const MyEnquiriesPage = () => {
                         <MessageSquare className="w-4 h-4" /> Message
                       </div>
                       <p className="text-sm text-slate-600 leading-relaxed italic border-l-2 border-primary/20 pl-3">
-                        "{enq.questions}"
+                        "{enq.message}"
                       </p>
                     </div>
                   </div>

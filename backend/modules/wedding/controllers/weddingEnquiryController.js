@@ -11,31 +11,59 @@ export const createEnquiry = async (req, res) => {
       name, 
       email, 
       phone, 
-      weddingDate, 
+      eventDate, 
+      weddingDate,
       guestCount, 
       budget, 
+      budgetRange,
       message, 
+      notes,
+      destination,
+      selectedServices,
+      services,
       targetType, 
       targetId 
     } = req.body;
     
-    if (!name || !email || !phone || !targetType || !targetId) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    if (!name || !email || !phone) {
+      return res.status(400).json({ message: 'Missing required fields (name, email, phone)' });
     }
 
     const enquiry = await WeddingEnquiry.create({
       name,
       email,
       phone,
-      weddingDate,
+      weddingDate: weddingDate || eventDate,
       guestCount,
-      budget,
-      message,
-      targetType,
-      targetId
+      budget: budget || budgetRange,
+      message: message || notes,
+      destination,
+      services: services || selectedServices,
+      targetType: targetType || 'General',
+      targetId: targetId || null,
+      user: req.user ? req.user._id : null
     });
 
     res.status(201).json({ success: true, enquiry });
+  } catch (error) {
+    console.error('Create Enquiry Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+};
+
+/**
+ * @desc    Get enquiries for current user
+ */
+export const getMyEnquiries = async (req, res) => {
+  try {
+    const enquiries = await WeddingEnquiry.find({ 
+      $or: [
+        { user: req.user._id },
+        { email: req.user.email }
+      ]
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json(enquiries);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -103,11 +131,18 @@ export const updateLeadStatus = async (req, res) => {
 
 export const getAdminEnquiries = async (req, res) => {
   try {
-    const enquiries = await WeddingEnquiry.find()
-      .populate('targetId')
+    const { status } = req.query;
+    console.log('📍 Fetching Admin Enquiries with status:', status);
+    const query = {};
+    if (status) query.status = status;
+
+    const enquiries = await WeddingEnquiry.find(query)
       .sort({ createdAt: -1 });
+    
+    console.log(`✅ Found ${enquiries.length} enquiries`);
     res.status(200).json(enquiries);
   } catch (error) {
+    console.error('❌ Error fetching admin enquiries:', error);
     res.status(500).json({ message: error.message });
   }
 };

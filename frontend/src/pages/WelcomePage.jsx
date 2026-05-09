@@ -28,18 +28,16 @@ const slides = [
     theme: "from-rose-600/20 to-transparent",
     btnColor: "bg-pink-100 hover:bg-pink-200 text-pink-950"
   },
-/*
   {
     id: 3,
     title: "Taxi Service",
     subtitle: "Taxi Service",
-    description: "Travel in comfort with our elite fleet of premium vehicles. Coming Soon!",
+    description: "Travel in comfort with our elite fleet of premium vehicles.",
     image: taxiImg,
-    path: null, // No implementation yet
+    path: "http://localhost:5173/",
     theme: "from-amber-600/20 to-transparent",
     btnColor: "bg-yellow-100 hover:bg-yellow-200 text-yellow-950"
   }
-*/
 ];
 
 const WelcomePage = () => {
@@ -101,6 +99,12 @@ const WelcomePage = () => {
 
     if (!targetPath) return; // For "Coming Soon" cases
 
+    // Handle external links
+    if (targetPath.startsWith('http')) {
+      window.location.href = targetPath;
+      return;
+    }
+
     if (!token) {
       // User choice made, now redirect to login
       navigate('/login', { state: { from: { pathname: targetPath } } });
@@ -130,7 +134,8 @@ const WelcomePage = () => {
               transition: 'opacity 1s ease-in-out',
               pointerEvents: selectedIndex === index ? 'auto' : 'none',
             }} 
-            className="relative w-full"
+            className="relative w-full cursor-pointer"
+            onClick={() => handleExplore(slide)}
           >
             {/* Background Image */}
             <div className="absolute inset-0 w-full h-full overflow-hidden">

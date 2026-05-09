@@ -22,10 +22,21 @@ const AdminDashboard = () => {
       try {
         const statsData = await weddingService.getAdminStats();
         const enquiriesData = await weddingService.getAdminEnquiries();
-        setStats(statsData.stats);
-        setEnquiries(enquiriesData);
+        
+        // Transform stats object into displayable array
+        const statsArray = [
+          { label: 'Total Vendors', value: statsData?.totalVendors || 0, icon: 'Users', growth: '+12%', path: '/wedding/admin/vendors/all' },
+          { label: 'Pending Approvals', value: statsData?.pendingVendors || 0, icon: 'Clock', growth: 'New', path: '/wedding/admin/vendors/pending' },
+          { label: 'Total Enquiries', value: statsData?.totalEnquiries || 0, icon: 'MessageSquare', growth: '+8%', path: '/wedding/admin/enquiries' },
+          { label: 'Pending Enquiries', value: statsData?.pendingEnquiries || 0, icon: 'TrendingUp', growth: 'Active', path: '/wedding/admin/enquiries' },
+        ];
+        
+        setStats(statsArray);
+        setEnquiries(Array.isArray(enquiriesData) ? enquiriesData : []);
       } catch (error) {
         console.error('Error fetching admin dashboard data:', error);
+        setStats([]);
+        setEnquiries([]);
       } finally {
         setLoading(false);
       }

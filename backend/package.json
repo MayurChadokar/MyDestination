@@ -20,6 +20,7 @@
     "cloudinary": "^1.41.3",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
+    "exceljs": "^4.4.0",
     "express": "^5.2.1",
     "firebase-admin": "^13.6.1",
     "joi": "^18.0.2",
@@ -32,7 +33,9 @@
     "nodemailer": "^7.0.12",
     "nodemon": "^3.1.11",
     "pdfkit": "^0.17.2",
+    "qrcode": "^1.5.4",
     "razorpay": "^2.9.6",
+    "simplify-js": "^1.2.4",
     "socket.io": "^4.8.3"
   }
 }

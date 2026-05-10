@@ -63,4 +63,11 @@ export const getFirebaseAdmin = () => {
   return firebaseAdmin;
 };
 
+export const getFirebaseDatabase = () => null;
+export const getFirebaseMessaging = () => {
+  const instance = getFirebaseAdmin();
+  return instance ? admin.messaging(instance) : null;
+};
+export const firebaseServerTimestamp = () => admin.database.ServerValue.TIMESTAMP;
+
 export { admin };

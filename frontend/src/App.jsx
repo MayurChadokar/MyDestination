@@ -179,6 +179,7 @@ const WeddingVendorMyVenues = React.lazy(() => import('./modules/wedding-integra
 const WeddingVendorAddVenue = React.lazy(() => import('./modules/wedding-integrated/vendor/panel/views/AddVenue'));
 const WeddingVendorAuthLogin = React.lazy(() => import('./modules/wedding-integrated/vendor/auth/views/VendorLogin'));
 const WeddingVendorAuthSignup = React.lazy(() => import('./modules/wedding-integrated/vendor/auth/views/VendorSignup'));
+const TaxiApp = React.lazy(() => import('./modules/taxi/TaxiApp'));
 
 // Loading Fallback Component
 const PageLoader = () => (
@@ -242,7 +243,8 @@ const Layout = ({ children }) => {
   // 1. GLOBAL HIDE: Auth pages, Admin, and Property Wizard
   const globalHideRoutes = ['/login', '/signup', '/register', '/admin', '/hotel/join', '/welcome'];
   const isWeddingRoute = location.pathname.startsWith('/wedding');
-  const shouldGlobalHide = location.pathname === '/' || globalHideRoutes.some(route => location.pathname.includes(route)) || isWeddingRoute;
+  const isTaxiRoute = location.pathname.startsWith('/taxi');
+  const shouldGlobalHide = location.pathname === '/' || globalHideRoutes.some(route => location.pathname.includes(route)) || isWeddingRoute || isTaxiRoute;
 
   if (shouldGlobalHide) {
     return <>{children}</>;
@@ -473,6 +475,11 @@ function App() {
   // Register the web FCM token with the correct backend endpoint based on logged-in role.
   const registerWebToken = React.useCallback(async (fcmToken) => {
     try {
+      const pathname = String(window.location.pathname || '').toLowerCase();
+      if (pathname.startsWith('/taxi')) {
+        return;
+      }
+
       const adminToken = localStorage.getItem('adminToken');
       if (adminToken) {
         await adminService.updateFcmToken(fcmToken, 'web');
@@ -577,6 +584,7 @@ function App() {
           <Routes>
             {/* User Auth Routes (Public Only) */}
             <Route path="/" element={<LandingPage />} />
+            <Route path="/taxi/*" element={<TaxiApp />} />
             <Route path="/login" element={<PublicRoute><UserLogin /></PublicRoute>} />
             <Route path="/signup" element={<PublicRoute><UserSignup /></PublicRoute>} />
             <Route path="/r/:referralCode" element={<ReferralHandler />} />

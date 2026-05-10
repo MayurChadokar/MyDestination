@@ -61,6 +61,8 @@ io.on('connection', (socket) => {
   });
 });
 
+configureTaxiSocketServer(server);
+
 // Middleware
 app.use(morgan('dev'));
 // Middleware to log request start
@@ -127,7 +129,9 @@ import referralRoutes from './modules/referral/routes/referralRoutes.js';
 import faqRoutes from './modules/marketing/routes/faqRoutes.js';
 import partnerRoutes from './modules/partner/routes/partnerRoutes.js';
 import blogRoutes from './modules/marketing/routes/blogRoutes.js';
-// import taxiRoutes from './modules/taxi/routes/taxiRoutes.js';
+import { taxiRouter } from './modules/taxi/routes/index.js';
+import { configureTaxiSocketServer } from './modules/taxi/socket/index.js';
+import { restoreScheduledDispatches } from './modules/taxi/services/dispatchService.js';
 import weddingRoutes from './modules/wedding/routes/weddingRoutes.js';
 
 app.use('/api/auth', authRoutes);
@@ -147,15 +151,18 @@ app.use('/api/referrals', referralRoutes);
 app.use('/api/faqs', faqRoutes);
 app.use('/api/partners', partnerRoutes);
 app.use('/api/blogs', blogRoutes);
-// app.use('/api/taxi', taxiRoutes);
+app.use('/api/taxi', taxiRouter);
+app.use('/api/v1', taxiRouter);
 app.use('/api/wedding', weddingRoutes);
 
 // Global Error Handler
 app.use((err, req, res, next) => {
   console.error('❌ Global Error Handler:', err);
-  res.status(err.status || 500).json({
+  const statusCode = Number(err?.statusCode || err?.status || 500);
+  res.status(statusCode).json({
     success: false,
     message: err.message || 'Internal Server Error',
+    details: err.details || undefined,
     stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
   });
 });
@@ -202,6 +209,7 @@ const connectWithRetry = async (retries = 5, delay = 5000) => {
         console.log(`🚀 Server is running on port ${PORT}`);
       });
 
+      await restoreScheduledDispatches();
       return; // Exit function on success
     } catch (err) {
       console.error(`❌ MongoDB connection attempt ${i + 1} failed:`, err.message);

@@ -111,6 +111,9 @@ const UserPoolingHome = lazy(() => import('./user/pages/pooling/PoolingHome'));
 const UserPoolingList = lazy(() => import('./user/pages/pooling/PoolingList'));
 const UserPoolingSeats = lazy(() => import('./user/pages/pooling/PoolingSeats'));
 const UserPoolingConfirm = lazy(() => import('./user/pages/pooling/PoolingConfirm'));
+const AirwaysHome = lazy(() => import('./user/pages/airways/AirwaysHome'));
+const AirwaysRouteBooking = lazy(() => import('./user/pages/airways/AirwaysRouteBooking'));
+const AirwaysConfirmation = lazy(() => import('./user/pages/airways/AirwaysConfirmation'));
 
 // Profile Settings Sub-pages
 const ProfileSettings = lazy(() => import('./user/pages/profile/ProfileSettings'));
@@ -241,6 +244,9 @@ const AdminBusServiceManager = lazy(() => import('./admin/pages/bus-service/BusS
 const AdminBusServiceDetails = lazy(() => import('./admin/pages/bus-service/BusServiceDetails'));
 const AdminBusBookingManager = lazy(() => import('./admin/pages/bus-service/BusBookingManager'));
 const AdminBusCommissionManager = lazy(() => import('./admin/pages/bus-service/BusCommissionManager'));
+const AdminAirwaysManager = lazy(() => import('./admin/pages/airways/AirwaysManager'));
+const AdminAirwaysRouteManager = lazy(() => import('./admin/pages/airways/AirwaysRouteManager'));
+const AdminAirwaysBookingManager = lazy(() => import('./admin/pages/airways/AirwaysBookingManager'));
 const AdminPricingPlaceholder = ({ title }) => (
   <div className="flex flex-col items-center justify-center min-h-[500px] text-gray-400 bg-white rounded-[32px] border border-gray-100 shadow-sm p-10">
     <MapPin size={60} strokeWidth={1} className="mb-6 opacity-20" />
@@ -878,11 +884,14 @@ function App() {
                 element={<RideDetail />}
               />
 
-              <Route path="user/pooling" element={<UserPoolingHome />} />
-              <Route path="user/pooling/list" element={<UserPoolingList />} />
-              <Route path="user/pooling/seats/:id" element={<UserPoolingSeats />} />
-              <Route path="user/pooling/confirm" element={<UserPoolingConfirm />} />
-              <Route path="user/rental" element={<BikeRentalHome />} />
+                <Route path="user/pooling" element={<UserPoolingHome />} />
+                <Route path="user/pooling/list" element={<UserPoolingList />} />
+                <Route path="user/pooling/seats/:id" element={<UserPoolingSeats />} />
+                <Route path="user/pooling/confirm" element={<UserPoolingConfirm />} />
+                <Route path="user/airways" element={<AirwaysHome />} />
+                <Route path="user/airways/routes/:routeId" element={<AirwaysRouteBooking />} />
+                <Route path="user/airways/confirmation/:bookingId" element={<AirwaysConfirmation />} />
+                <Route path="user/rental" element={<BikeRentalHome />} />
               <Route
                 path="user/rental/vehicle"
                 element={<RentalVehicleDetail />}
@@ -1141,6 +1150,13 @@ function App() {
                 <Route path="bus-service/commission" element={<AdminBusCommissionManager />} />
                 <Route path="bus-service/bookings" element={<AdminBusBookingManager />} />
                 <Route path="bus-service/:id" element={<AdminBusServiceDetails />} />
+                <Route path="airways" element={<AdminAirwaysManager />} />
+                <Route path="airways/create" element={<AdminAirwaysManager mode="create" />} />
+                <Route path="airways/edit/:id" element={<AdminAirwaysManager mode="edit" />} />
+                <Route path="airways/routes" element={<AdminAirwaysRouteManager />} />
+                <Route path="airways/routes/create" element={<AdminAirwaysRouteManager mode="create" />} />
+                <Route path="airways/routes/edit/:id" element={<AdminAirwaysRouteManager mode="edit" />} />
+                <Route path="airways/bookings" element={<AdminAirwaysBookingManager />} />
                 <Route path="pooling" element={<Navigate to="/taxi/admin/pooling/routes" replace />} />
                 <Route path="pooling/routes" element={<AdminPoolingManager />} />
                 <Route

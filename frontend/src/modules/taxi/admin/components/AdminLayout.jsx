@@ -27,6 +27,7 @@ import {
   MessageCircle,
   Monitor,
   Package,
+  Plane,
   PlusCircle,
   Search,
   Settings,
@@ -784,6 +785,15 @@ const AdminLayout = () => {
             subItems: [
               { label: 'Fleet Manager', path: '/admin/bus-service', permission: 'bus_service.view' },
               { label: 'Bus Bookings', path: '/admin/bus-service/bookings', permission: 'bus_service.view' },
+            ],
+          },
+          {
+            icon: Plane,
+            label: 'Airways',
+            subItems: [
+              { label: 'Airway Manager', path: '/admin/airways', permission: 'airways.view' },
+              { label: 'Airway Routes', path: '/admin/airways/routes', permission: 'airways.view' },
+              { label: 'Airway Bookings', path: '/admin/airways/bookings', permission: 'airways.view' },
             ],
           },
           {

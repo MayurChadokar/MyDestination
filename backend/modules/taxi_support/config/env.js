@@ -4,12 +4,17 @@ import dotenv from 'dotenv';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const primaryEnvPath = path.resolve(__dirname, '../../.env');
-const fallbackEnvPath = path.resolve(process.cwd(), '.env');
+const envCandidates = [
+  path.resolve(__dirname, '../../../.env'),
+  path.resolve(process.cwd(), '.env'),
+  path.resolve(__dirname, '../../.env'),
+];
 
-const primaryEnvLoad = dotenv.config({ path: primaryEnvPath });
-if (primaryEnvLoad.error && primaryEnvPath !== fallbackEnvPath) {
-  dotenv.config({ path: fallbackEnvPath });
+for (const envPath of envCandidates) {
+  const result = dotenv.config({ path: envPath });
+  if (!result.error) {
+    break;
+  }
 }
 
 const resolvedJwtSecret = process.env.JWT_SECRET || process.env.JWT_ACCESS_SECRET;

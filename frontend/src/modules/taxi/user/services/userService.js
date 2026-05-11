@@ -1,5 +1,11 @@
 import api from '../../../shared/api/axiosInstance';
 import { withUserAuth } from './authService';
+import {
+  createUserAirwayBooking,
+  getUserAirwayBooking,
+  getUserAirwayRoute,
+  getUserAirwayRoutes,
+} from '../../admin/services/airwaysService';
 
 export const userService = {
   getAppModules: async () => {
@@ -90,4 +96,8 @@ export const userService = {
     const response = await api.get('/users/pooling/bookings');
     return response;
   },
+  getAirwayRoutes: async (filters = {}) => getUserAirwayRoutes(filters),
+  getAirwayRoute: async (routeId) => getUserAirwayRoute(routeId),
+  createAirwayBooking: async (payload) => createUserAirwayBooking(payload),
+  getAirwayBooking: async (bookingId) => getUserAirwayBooking(bookingId),
 };

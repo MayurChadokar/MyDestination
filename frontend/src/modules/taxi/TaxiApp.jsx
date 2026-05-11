@@ -546,14 +546,17 @@ const UserUpcomingRideReminderBootstrap = () => {
   const location = useLocation();
 
   useEffect(() => {
-    const isUserRoute =
-      location.pathname.startsWith('/taxi/user') ||
-      location.pathname === '/taxi' ||
-      location.pathname.startsWith('/taxi/ride') ||
-      location.pathname.startsWith('/taxi/pooling') ||
-      location.pathname.startsWith('/taxi/bus');
+    const pathname = String(location.pathname || '');
+    const isReminderEligibleRoute =
+      pathname === '/taxi' ||
+      pathname === '/taxi/user' ||
+      pathname.startsWith('/taxi/user/activity') ||
+      pathname.startsWith('/taxi/user/profile') ||
+      pathname.startsWith('/taxi/ride') ||
+      pathname.startsWith('/taxi/pooling') ||
+      pathname.startsWith('/taxi/bus');
 
-    if (!isUserRoute || !getLocalUserToken()) {
+    if (!isReminderEligibleRoute || !getLocalUserToken()) {
       return undefined;
     }
 

@@ -216,6 +216,18 @@ import {
   updatePoolingBookingStatus,
   uploadImage,
 } from '../controllers/poolingController.js';
+import {
+  createAirway,
+  createAirwayRoute,
+  deleteAirway,
+  deleteAirwayRoute,
+  getAirwayBookings,
+  getAirwayRoutes,
+  getAirways,
+  updateAirway,
+  updateAirwayBookingStatus,
+  updateAirwayRoute,
+} from '../controllers/airwaysController.js';
 import { promotionsRouter } from '../promotions/routes/index.js';
 import { listSafetyAlerts, resolveSafetyAlert } from '../../safety/controllers/safetyController.js';
 
@@ -340,6 +352,17 @@ adminRouter.delete('/admin/pooling-vehicles/:id', deletePoolingVehicle);
 
 adminRouter.get('/admin/pooling-bookings', getPoolingBookings);
 adminRouter.patch('/admin/pooling-bookings/:id/status', updatePoolingBookingStatus);
+
+adminRouter.get('/admin/airways', getAirways);
+adminRouter.post('/admin/airways', createAirway);
+adminRouter.patch('/admin/airways/:id', updateAirway);
+adminRouter.delete('/admin/airways/:id', deleteAirway);
+adminRouter.get('/admin/airway-routes', getAirwayRoutes);
+adminRouter.post('/admin/airway-routes', createAirwayRoute);
+adminRouter.patch('/admin/airway-routes/:id', updateAirwayRoute);
+adminRouter.delete('/admin/airway-routes/:id', deleteAirwayRoute);
+adminRouter.get('/admin/airway-bookings', getAirwayBookings);
+adminRouter.patch('/admin/airway-bookings/:id/status', updateAirwayBookingStatus);
 
 adminRouter.post('/admin/upload-image', uploadImage);
 adminRouter.get('/admin/rental-booking-requests', getRentalBookingRequests);

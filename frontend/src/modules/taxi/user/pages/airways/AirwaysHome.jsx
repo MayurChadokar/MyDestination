@@ -35,6 +35,7 @@ const AirwaysHome = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [routes, setRoutes] = useState([]);
+  const [allRoutes, setAllRoutes] = useState([]);
   const [searchForm, setSearchForm] = useState({
     origin: '',
     destination: '',
@@ -43,7 +44,7 @@ const AirwaysHome = () => {
   const [appliedFilters, setAppliedFilters] = useState({
     origin: '',
     destination: '',
-    travelDate: tomorrowDateValue(),
+    travelDate: '',
   });
 
   const loadRoutes = async (filters = {}) => {
@@ -59,11 +60,38 @@ const AirwaysHome = () => {
     }
   };
 
+  const loadSuggestionRoutes = async () => {
+    try {
+      const nextRoutes = await userService.getAirwayRoutes({ travelDate: '' });
+      setAllRoutes(nextRoutes);
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   useEffect(() => {
     loadRoutes(appliedFilters);
   }, [appliedFilters.origin, appliedFilters.destination, appliedFilters.travelDate]);
 
+  useEffect(() => {
+    loadSuggestionRoutes();
+  }, []);
+
   const featuredRoutes = useMemo(() => routes.slice(0, 3), [routes]);
+
+  const originSuggestions = useMemo(() => {
+    const query = searchForm.origin.trim().toLowerCase();
+    const values = [...new Set(allRoutes.map((route) => String(route.originAirport || '').trim()).filter(Boolean))];
+    if (!query) return values.slice(0, 6);
+    return values.filter((value) => value.toLowerCase().includes(query)).slice(0, 6);
+  }, [allRoutes, searchForm.origin]);
+
+  const destinationSuggestions = useMemo(() => {
+    const query = searchForm.destination.trim().toLowerCase();
+    const values = [...new Set(allRoutes.map((route) => String(route.destinationAirport || '').trim()).filter(Boolean))];
+    if (!query) return values.slice(0, 6);
+    return values.filter((value) => value.toLowerCase().includes(query)).slice(0, 6);
+  }, [allRoutes, searchForm.destination]);
 
   const handleChange = (key, value) => {
     setSearchForm((current) => ({ ...current, [key]: value }));
@@ -84,7 +112,11 @@ const AirwaysHome = () => {
       travelDate: tomorrowDateValue(),
     };
     setSearchForm(reset);
-    setAppliedFilters(reset);
+    setAppliedFilters({
+      origin: '',
+      destination: '',
+      travelDate: '',
+    });
   };
 
   return (
@@ -168,6 +200,20 @@ const AirwaysHome = () => {
                   placeholder="DEHRADUN"
                   className="mt-2 w-full bg-transparent text-sm font-black text-slate-900 outline-none placeholder:text-slate-300"
                 />
+                {originSuggestions.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {originSuggestions.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => handleChange('origin', item)}
+                        className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600 shadow-sm"
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
@@ -178,6 +224,20 @@ const AirwaysHome = () => {
                   placeholder="KEDARNATH"
                   className="mt-2 w-full bg-transparent text-sm font-black text-slate-900 outline-none placeholder:text-slate-300"
                 />
+                {destinationSuggestions.length > 0 ? (
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {destinationSuggestions.map((item) => (
+                      <button
+                        key={item}
+                        type="button"
+                        onClick={() => handleChange('destination', item)}
+                        className="rounded-full bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-slate-600 shadow-sm"
+                      >
+                        {item}
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
@@ -344,6 +404,12 @@ const AirwaysHome = () => {
                 <h3 className="mt-4 text-lg font-black text-slate-900">No helicopter routes matched</h3>
                 <p className="mt-2 text-sm font-semibold text-slate-500">
                   Try another date or route pair to see the next available helicopter sector.
+                </p>
+                <p className="mt-3 text-xs font-bold uppercase tracking-[0.16em] text-slate-400">
+                  This page shows only routes created in Taxi Admin > Airways > Airway Routes.
+                </p>
+                <p className="mt-2 text-sm font-semibold text-slate-500">
+                  Routes created in Pooling, Bus, or other transport modules will not appear here.
                 </p>
               </div>
             )}

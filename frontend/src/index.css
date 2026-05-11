@@ -105,6 +105,33 @@ body:has(#hotel-root) {
   @apply text-slate-400;
 }
 
+.admin-sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.45) transparent;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+  border: 1px solid transparent;
+  background-clip: content-box;
+}
+
+.admin-sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.55);
+}
+
 .wedding-sidebar-scrollbar {
   scrollbar-width: thin;
   scrollbar-color: hsl(353, 45%, 35%, 0.2) transparent;

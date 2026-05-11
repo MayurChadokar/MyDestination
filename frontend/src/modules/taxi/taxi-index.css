@@ -41,16 +41,7 @@ body {
   --shadow-soft: 0 4px 20px -2px rgba(0,0,0,0.05);
 }
 
-/* Global scrollbar hiding for a cleaner mobile experience */
-* {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-}
-
-*::-webkit-scrollbar {
-    display: none; /* Chrome, Safari and Opera */
-}
-
+/* Class-based scrollbar hiding for specific mobile-optimized views */
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }

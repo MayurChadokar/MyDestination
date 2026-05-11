@@ -45,10 +45,16 @@ export const ADMIN_PERMISSION_GROUPS = [
 export const ALL_ADMIN_PERMISSIONS = ADMIN_PERMISSION_GROUPS.flatMap((group) => group.items.map((item) => item.key));
 
 export const hasAdminPermission = (adminInfo = {}, permission) => {
-  const type = String(adminInfo?.admin_type || adminInfo?.role || '').toLowerCase();
+  const type = String(adminInfo?.admin_type || adminInfo?.role || '').toLowerCase().trim();
   const permissions = Array.isArray(adminInfo?.permissions) ? adminInfo.permissions : [];
 
-  if (type === 'superadmin' || permissions.includes('*')) {
+  const isSuperAdmin = 
+    type === 'superadmin' || 
+    type === 'super-admin' || 
+    type === 'admin' || 
+    permissions.includes('*');
+
+  if (isSuperAdmin) {
     return true;
   }
 

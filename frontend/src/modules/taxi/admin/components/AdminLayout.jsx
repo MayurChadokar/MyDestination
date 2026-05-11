@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { socketService } from '../../../shared/api/socket';
 import { useSettings } from '../../../shared/context/SettingsContext';
-import { clearTaxiAdminSession, getTaxiAdminToken } from '../../shared/authStorage';
+import { clearTaxiAdminSession, getTaxiAdminInfo, getTaxiAdminToken, getTokenPayload } from '../../shared/authStorage';
 import { getSupportConversations, markSupportMessagesRead } from '../../shared/chat/chatApi';
 import { adminService } from '../services/adminService';
 import { hasAdminPermission } from '../constants/adminAccess';
@@ -45,9 +45,32 @@ import {
 
 const ADMIN_MODE = 'admin';
 const OWNER_MODE = 'owner';
+const TAXI_ADMIN_BASE_PATH = '/taxi/admin';
 const MODE_STORAGE_KEY = 'adminPanelMode';
 const SIDEBAR_EXPANSION_STORAGE_KEY = 'adminSidebarExpandedGroups';
 const NOTIFICATION_DISMISS_STORAGE_KEY = 'adminNotificationDismissals';
+
+const normalizeAdminPath = (path = '') => {
+  const value = String(path || '').trim();
+
+  if (!value) {
+    return value;
+  }
+
+  if (value.startsWith(`${TAXI_ADMIN_BASE_PATH}/`) || value === TAXI_ADMIN_BASE_PATH) {
+    return value;
+  }
+
+  if (value.startsWith('/admin/')) {
+    return `${TAXI_ADMIN_BASE_PATH}${value.slice('/admin'.length)}`;
+  }
+
+  if (value === '/admin') {
+    return TAXI_ADMIN_BASE_PATH;
+  }
+
+  return value;
+};
 
 const pathMatches = (pathname, targetPath) =>
   pathname === targetPath || pathname.startsWith(`${targetPath}/`);
@@ -84,35 +107,76 @@ const flattenSearchEntries = (items = [], parentLabels = []) =>
     return [];
   });
 
+const normalizeAdminProfile = (profile = {}) => {
+  const adminType = String(profile?.admin_type || profile?.role || '').trim().toLowerCase();
+  const permissions = Array.isArray(profile?.permissions)
+    ? profile.permissions.map((permission) => String(permission || '').trim()).filter(Boolean)
+    : [];
+
+  const isSubadmin = adminType === 'subadmin';
+  const resolvedPermissions = permissions.includes('*')
+    ? ['*']
+    : permissions;
+
+  return {
+    ...profile,
+    admin_type: isSubadmin ? 'subadmin' : 'superadmin',
+    permissions: !isSubadmin && resolvedPermissions.length === 0 ? ['*'] : resolvedPermissions,
+    name: String(profile?.name || '').trim() || 'Admin',
+  };
+};
+
 const readAdminProfile = () => {
   if (typeof window === 'undefined') {
     return { admin_type: 'superadmin', permissions: ['*'], name: 'Admin' };
   }
 
   try {
+    const scopedInfo = getTaxiAdminInfo();
+    if (scopedInfo && Object.keys(scopedInfo).length > 0) {
+      return normalizeAdminProfile(scopedInfo);
+    }
+
     const parsed = JSON.parse(window.localStorage.getItem('adminInfo') || 'null');
-    return parsed || { admin_type: 'superadmin', permissions: ['*'], name: 'Admin' };
+    if (parsed && typeof parsed === 'object') {
+      return normalizeAdminProfile(parsed);
+    }
   } catch {
-    return { admin_type: 'superadmin', permissions: ['*'], name: 'Admin' };
+    // Fall through to token-based recovery.
   }
+
+  const tokenPayload = getTokenPayload(getTaxiAdminToken() || window.localStorage.getItem('adminToken') || '');
+  if (tokenPayload?.sub) {
+    return normalizeAdminProfile({
+      name: tokenPayload?.name || 'Admin',
+      role: tokenPayload?.role || 'admin',
+      admin_type: tokenPayload?.admin_type || tokenPayload?.role || 'superadmin',
+      permissions: Array.isArray(tokenPayload?.permissions) ? tokenPayload.permissions : ['*'],
+    });
+  }
+
+  return { admin_type: 'superadmin', permissions: ['*'], name: 'Admin' };
 };
 
 const filterSidebarItemsByAccess = (items = [], adminProfile = {}) =>
   items.flatMap((item) => {
+    const adminType = String(adminProfile?.admin_type || adminProfile?.role || '').trim().toLowerCase();
+    const hasExplicitPermissions = Array.isArray(adminProfile?.permissions) && adminProfile.permissions.length > 0;
+    const shouldBypassFiltering = adminType !== 'subadmin' && !hasExplicitPermissions;
     const selfAllowed = !item.permission || hasAdminPermission(adminProfile, item.permission);
 
     if (item.subItems) {
       const filteredSubItems = filterSidebarItemsByAccess(item.subItems, adminProfile);
-      if (!selfAllowed && filteredSubItems.length === 0) {
+      if (!shouldBypassFiltering && !selfAllowed && filteredSubItems.length === 0) {
         return [];
       }
-      if (filteredSubItems.length === 0) {
+      if (!shouldBypassFiltering && filteredSubItems.length === 0) {
         return [];
       }
-      return [{ ...item, subItems: filteredSubItems }];
+      return [{ ...item, subItems: shouldBypassFiltering ? item.subItems : filteredSubItems }];
     }
 
-    return selfAllowed ? [item] : [];
+    return shouldBypassFiltering || selfAllowed ? [item] : [];
   });
 
 const filterSidebarSectionsByAccess = (sections = [], adminProfile = {}) =>
@@ -122,6 +186,19 @@ const filterSidebarSectionsByAccess = (sections = [], adminProfile = {}) =>
       items: filterSidebarItemsByAccess(section.items || [], adminProfile),
     }))
     .filter((section) => section.items.length > 0);
+
+const normalizeSidebarItemPaths = (items = []) =>
+  items.map((item) => ({
+    ...item,
+    path: item.path ? normalizeAdminPath(item.path) : item.path,
+    subItems: Array.isArray(item.subItems) ? normalizeSidebarItemPaths(item.subItems) : item.subItems,
+  }));
+
+const normalizeSidebarSectionPaths = (sections = []) =>
+  sections.map((section) => ({
+    ...section,
+    items: normalizeSidebarItemPaths(section.items || []),
+  }));
 
 const NOTIFICATION_PAGE_SIZE = 5;
 
@@ -907,16 +984,22 @@ const AdminLayout = () => {
     []
   );
 
-  const isOwnerRoute = location.pathname.startsWith('/admin/owners') || location.pathname.startsWith('/admin/fleet');
-  const isAdminChatRoute = pathMatches(location.pathname, '/admin/chat');
+  const isOwnerRoute =
+    location.pathname.startsWith(normalizeAdminPath('/admin/owners')) ||
+    location.pathname.startsWith(normalizeAdminPath('/admin/fleet'));
+  const isAdminChatRoute = pathMatches(location.pathname, normalizeAdminPath('/admin/chat'));
   const mode = isOwnerRoute ? OWNER_MODE : ADMIN_MODE;
   const sidebarSections = useMemo(
-    () => filterSidebarSectionsByAccess(mode === OWNER_MODE ? ownerSections : adminSections, adminProfile),
+    () =>
+      filterSidebarSectionsByAccess(
+        normalizeSidebarSectionPaths(mode === OWNER_MODE ? ownerSections : adminSections),
+        adminProfile,
+      ),
     [adminProfile, adminSections, mode, ownerSections],
   );
   const unreadCountsByPath = useMemo(
     () => ({
-      '/admin/chat': chatUnreadCount,
+      [normalizeAdminPath('/admin/chat')]: chatUnreadCount,
     }),
     [chatUnreadCount],
   );
@@ -972,11 +1055,11 @@ const AdminLayout = () => {
     localStorage.setItem(MODE_STORAGE_KEY, nextMode);
 
     if (nextMode === OWNER_MODE && !isOwnerRoute) {
-      navigate('/admin/owners/dashboard');
+      navigate(normalizeAdminPath('/admin/owners/dashboard'));
     }
 
     if (nextMode === ADMIN_MODE && isOwnerRoute) {
-      navigate('/taxi/admin/dashboard');
+      navigate(normalizeAdminPath('/admin/dashboard'));
     }
   };
 
@@ -1231,12 +1314,12 @@ const AdminLayout = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-[#F8F9FA] font-sans text-gray-900">
       <aside
-        className={`relative z-50 flex h-screen flex-col overflow-hidden transition-all duration-500 ${
+        className={`relative z-50 flex h-screen min-h-0 flex-col overflow-hidden transition-[width,transform] duration-500 ${
           isCollapsed ? 'w-20' : 'w-72'
         } ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}
         style={{ backgroundColor: adminThemeColor }}
       >
-        <div className="flex h-full flex-col">
+        <div className="flex h-full min-h-0 flex-col">
           <div className="group/sidebar-head relative mb-4 flex h-24 items-center border-b border-white/5 px-6">
             <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/5 bg-white/5 p-1 transition-all group-hover/sidebar-head:scale-105">
@@ -1274,7 +1357,9 @@ const AdminLayout = () => {
             </button>
           </div>
 
-          <nav className="no-scrollbar mt-0 flex-1 space-y-8 overflow-y-auto px-4 pb-12 scroll-smooth">
+          <nav
+            className="admin-sidebar-scrollbar mt-0 h-full min-h-0 flex-1 space-y-8 overflow-y-auto px-4 pb-12"
+          >
             {sidebarSections.map((section) => (
               <div key={section.title} className="space-y-1">
                 {!isCollapsed && (
@@ -1315,7 +1400,7 @@ const AdminLayout = () => {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#f0f4f8]">
+      <div className="flex h-full min-w-0 min-h-0 flex-1 flex-col overflow-hidden bg-[#f0f4f8]">
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-gray-100 bg-white px-6 shadow-sm">
           <div className="flex items-center gap-3">
             <div className="h-6 w-1 rounded-full bg-indigo-600" />
@@ -1438,7 +1523,7 @@ const AdminLayout = () => {
                               key={item.id || item.requestId}
                               type="button"
                               onClick={() => {
-                                navigate('/admin/trips');
+                                navigate(normalizeAdminPath('/admin/trips'));
                                 setIsNotificationsOpen(false);
                               }}
                               className="relative w-full rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left transition-all hover:border-indigo-200 hover:bg-indigo-50/40"
@@ -1498,7 +1583,7 @@ const AdminLayout = () => {
                             key={item._id || item.id || item.booking_reference}
                             type="button"
                             onClick={() => {
-                              navigate('/admin/owners/bookings');
+                              navigate(normalizeAdminPath('/admin/owners/bookings'));
                               setIsNotificationsOpen(false);
                             }}
                             className="relative w-full rounded-2xl border border-slate-100 bg-white px-4 py-3 text-left transition-all hover:border-indigo-200 hover:bg-indigo-50/40"
@@ -1555,7 +1640,7 @@ const AdminLayout = () => {
                             key={item.id}
                             type="button"
                             onClick={() => {
-                              navigate('/admin/chat');
+                              navigate(normalizeAdminPath('/admin/chat'));
                               setChatNotifications([]);
                               setIsNotificationsOpen(false);
                             }}
@@ -1746,7 +1831,7 @@ const AdminLayout = () => {
           </div>
         )}
 
-        <main className="no-scrollbar flex-1 overflow-y-auto p-4 scroll-smooth lg:p-8">
+        <main className="admin-sidebar-scrollbar flex-1 min-h-0 overflow-y-auto p-4 scroll-smooth lg:p-8">
           <Outlet />
         </main>
       </div>

@@ -201,8 +201,15 @@ const Layout = ({ children }) => {
     maintenanceMessage: ''
   });
 
-  // Disable Lenis on Admin routes only (as requested)
-  const isCmsRoute = location.pathname.startsWith('/admin') || location.pathname.startsWith('/wedding/admin') || location.pathname.startsWith('/wedding/vendor');
+  // Disable Lenis on admin-style dashboard routes so nested panels keep native wheel/touchpad scrolling.
+  const isCmsRoute =
+    location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/taxi/admin') ||
+    location.pathname.startsWith('/taxi/user-import') ||
+    location.pathname.startsWith('/taxi/driver-import') ||
+    location.pathname.startsWith('/taxi/owner') ||
+    location.pathname.startsWith('/wedding/admin') ||
+    location.pathname.startsWith('/wedding/vendor');
   useLenis(isCmsRoute);
 
   const [hideNavsDueToSlider, setHideNavsDueToSlider] = React.useState(false);

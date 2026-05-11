@@ -99,6 +99,8 @@ const clearStaleAuthState = (role = '', staleToken = '') => {
       localStorage.removeItem('taxiUserToken');
     }
     localStorage.removeItem('taxiUserInfo');
+    localStorage.removeItem('userInfo');
+    localStorage.removeItem('role');
   }
 
   if (!normalizedRole || normalizedRole === 'driver' || normalizedRole === 'owner') {

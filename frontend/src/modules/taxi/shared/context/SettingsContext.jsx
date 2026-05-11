@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import api from '../api/axiosInstance';
 
 let activeFaviconObjectUrl = '';
@@ -141,34 +142,61 @@ const buildFaviconHref = (faviconUrl = '') => {
 };
 
 export const SettingsProvider = ({ children }) => {
+  const location = useLocation();
   const [settings, setSettings] = useState(DEFAULT_SETTINGS_CONTEXT.settings);
   const [loading, setLoading] = useState(true);
 
   const fetchSettings = async () => {
+    const pathname = String(location.pathname || '');
+    const isUserAuthRoute =
+      pathname === '/taxi/login' ||
+      pathname === '/taxi/signup' ||
+      pathname === '/taxi/user/login' ||
+      pathname === '/taxi/user/signup' ||
+      pathname === '/taxi/user/verify-otp';
+
     try {
-      const [genRes, cusRes, transportRideRes, bidRideRes, paymentGatewayRes] = await Promise.allSettled([
+      const requests = [
         api.get('/admin/general-settings/general'),
         api.get('/admin/general-settings/customize'),
-        api.get('/admin/general-settings/transport-ride'),
-        api.get('/admin/general-settings/bid-ride'),
-        api.get('/common/payment-gateway'),
-      ]);
+      ];
+
+      if (!isUserAuthRoute) {
+        requests.push(
+          api.get('/admin/general-settings/transport-ride'),
+          api.get('/admin/general-settings/bid-ride'),
+          api.get('/common/payment-gateway'),
+        );
+      }
+
+      const [genRes, cusRes, transportRideRes, bidRideRes, paymentGatewayRes] = await Promise.allSettled(requests);
+      const generalSettings =
+        genRes.status === 'fulfilled'
+          ? (genRes.value?.data?.settings || genRes.value?.settings || {})
+          : {};
+      const customizationSettings =
+        cusRes.status === 'fulfilled'
+          ? (cusRes.value?.data?.settings || cusRes.value?.settings || {})
+          : {};
+      const transportRideSettings =
+        transportRideRes?.status === 'fulfilled'
+          ? (transportRideRes.value?.data?.settings || transportRideRes.value?.settings || {})
+          : { enable_bus_service: '0' };
+      const bidRideSettings =
+        bidRideRes?.status === 'fulfilled'
+          ? (bidRideRes.value?.data?.settings || bidRideRes.value?.settings || DEFAULT_SETTINGS_CONTEXT.settings.bidRide)
+          : DEFAULT_SETTINGS_CONTEXT.settings.bidRide;
+      const activePaymentGateway =
+        paymentGatewayRes?.status === 'fulfilled'
+          ? (paymentGatewayRes.value?.data?.activeGateway || paymentGatewayRes.value?.activeGateway || null)
+          : null;
 
       setSettings({
-        general: genRes.status === 'fulfilled' ? (genRes.value.data?.settings || {}) : {},
-        customization: cusRes.status === 'fulfilled' ? (cusRes.value.data?.settings || {}) : {},
-        transportRide:
-          transportRideRes.status === 'fulfilled'
-            ? (transportRideRes.value.data?.settings || {})
-            : { enable_bus_service: '0' },
-        bidRide:
-          bidRideRes.status === 'fulfilled'
-            ? (bidRideRes.value.data?.settings || DEFAULT_SETTINGS_CONTEXT.settings.bidRide)
-            : DEFAULT_SETTINGS_CONTEXT.settings.bidRide,
-        paymentGateway:
-          paymentGatewayRes.status === 'fulfilled'
-            ? (paymentGatewayRes.value.data?.activeGateway || null)
-            : null,
+        general: generalSettings,
+        customization: customizationSettings,
+        transportRide: transportRideSettings,
+        bidRide: bidRideSettings,
+        paymentGateway: activePaymentGateway,
       });
     } catch (err) {
       console.error('Failed to fetch settings:', err);
@@ -179,7 +207,7 @@ export const SettingsProvider = ({ children }) => {
 
   useEffect(() => {
     fetchSettings();
-  }, []);
+  }, [location.pathname]);
 
   useEffect(() => {
     const appName = settings.general?.app_name || 'App';

@@ -62,6 +62,9 @@ export const setTaxiUserSession = ({ token = '', user = null } = {}) => {
 export const clearTaxiUserSession = () => {
   localStorage.removeItem(TAXI_USER_TOKEN_KEY);
   localStorage.removeItem(TAXI_USER_INFO_KEY);
+  localStorage.removeItem('userInfo');
+  localStorage.removeItem('role');
+  localStorage.removeItem('chatRole');
 };
 
 export const getTaxiUserInfo = () => {
@@ -118,4 +121,5 @@ export const getTaxiAdminInfo = () => {
 export const clearTaxiAdminSession = () => {
   localStorage.removeItem(TAXI_ADMIN_TOKEN_KEY);
   localStorage.removeItem(TAXI_ADMIN_INFO_KEY);
+  localStorage.removeItem('adminInfo');
 };

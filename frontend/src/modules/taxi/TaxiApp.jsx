@@ -671,6 +671,8 @@ const DriverEntryRedirect = () => {
 };
 
 function App() {
+  const location = useLocation();
+
   useEffect(() => {
     const scopedUserToken = getTaxiUserToken();
     const genericToken = localStorage.getItem('token') || '';
@@ -680,14 +682,22 @@ function App() {
     }
   }, []);
 
+  const pathname = String(location.pathname || '');
+  const isUserAuthRoute =
+    pathname === '/taxi/login' ||
+    pathname === '/taxi/signup' ||
+    pathname === '/taxi/user/login' ||
+    pathname === '/taxi/user/signup' ||
+    pathname === '/taxi/user/verify-otp';
+
   return (
     
       <SettingsProvider>
-        <RentalLocationTracker />
+        {!isUserAuthRoute ? <RentalLocationTracker /> : null}
         <AppAutoUpdater />
         <ScrollToTop />
-        <UserAccountInvalidationListener />
-        <UserUpcomingRideReminderBootstrap />
+        {!isUserAuthRoute ? <UserAccountInvalidationListener /> : null}
+        {!isUserAuthRoute ? <UserUpcomingRideReminderBootstrap /> : null}
         <MainLayout>
           <Suspense
             fallback={

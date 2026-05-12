@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -20,6 +20,8 @@ import {
 import toast from 'react-hot-toast';
 import { useSettings } from '../../../shared/context/SettingsContext';
 import { userService } from '../../services/userService';
+
+const PHONEPE_PENDING_BOOKING_KEY = 'taxi-airway-phonepe-booking';
 
 const tomorrowDateValue = () => {
   const next = new Date();
@@ -45,6 +47,21 @@ const readStoredUser = () => {
   }
 };
 
+const loadRazorpayScript = () =>
+  new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true);
+      return;
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.async = true;
+    script.onload = () => resolve(true);
+    script.onerror = () => resolve(false);
+    document.body.appendChild(script);
+  });
+
 const AirwaysRouteBooking = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -67,7 +84,25 @@ const AirwaysRouteBooking = () => {
       notes: '',
     };
   });
-  const [paymentMethod, setPaymentMethod] = useState(activePaymentGateway ? 'online' : 'reserve');
+  const paymentMethod = 'online';
+
+  const buildBookingPayload = () => ({
+    routeId: route?.id,
+    seatCount,
+    customerName: formData.customerName,
+    customerPhone: formData.customerPhone,
+    customerEmail: formData.customerEmail,
+    passengerNames,
+    notes: formData.notes,
+    travelDate,
+    subtotalFare,
+    serviceTaxPercent,
+    serviceTaxAmount,
+    totalFare,
+    paymentMethod,
+    paymentMethodLabel: activePaymentGateway?.label || 'Online',
+    gatewaySlug: activePaymentGateway?.slug || '',
+  });
 
   useEffect(() => {
     const loadRoute = async () => {
@@ -103,30 +138,74 @@ const AirwaysRouteBooking = () => {
   }, [formData.customerName, seatCount]);
 
   useEffect(() => {
-    if (activePaymentGateway && paymentMethod !== 'online' && paymentMethod !== 'reserve') {
-      setPaymentMethod('online');
+    const merchantTransactionId = new URLSearchParams(window.location.search).get('phonepe_txn');
+    if (!merchantTransactionId || activePaymentGateway?.slug !== 'phone_pay') {
+      return;
     }
-    if (!activePaymentGateway && paymentMethod === 'online') {
-      setPaymentMethod('reserve');
-    }
-  }, [activePaymentGateway, paymentMethod]);
 
-  const paymentOptions = useMemo(() => {
-    const options = [];
-    if (activePaymentGateway) {
-      options.push({
-        id: 'online',
-        title: activePaymentGateway.label || 'Online',
-        subtitle: 'Secure online checkout',
-      });
-    }
-    options.push({
-      id: 'reserve',
-      title: 'Reserve Now',
-      subtitle: 'Pay at helipad counter',
-    });
-    return options;
-  }, [activePaymentGateway]);
+    let cancelled = false;
+
+    const clearPhonePeQuery = () => {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('phonepe_txn');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    };
+
+    const verifyPhonePePayment = async () => {
+      let pendingPayload = null;
+      try {
+        pendingPayload = JSON.parse(window.sessionStorage.getItem(PHONEPE_PENDING_BOOKING_KEY) || 'null');
+      } catch {
+        pendingPayload = null;
+      }
+
+      if (!pendingPayload || pendingPayload.routeId !== routeId) {
+        clearPhonePeQuery();
+        toast.error('Could not restore your pending PhonePe booking details.');
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const response = await userService.verifyAirwayBookingPayment({
+          gateway: 'phone_pay',
+          merchantTransactionId,
+          ...pendingPayload,
+        });
+
+        if (cancelled) return;
+
+        if (response?.status === 'pending') {
+          toast.error('PhonePe payment is still pending. Please wait a moment and refresh.');
+          return;
+        }
+
+        if (response?.status === 'failed') {
+          toast.error('PhonePe payment was not completed.');
+          return;
+        }
+
+        window.sessionStorage.removeItem(PHONEPE_PENDING_BOOKING_KEY);
+        clearPhonePeQuery();
+        toast.success('Seat booked and paid successfully.');
+        navigate(`/taxi/user/airways/confirmation/${response.id}`, { state: { booking: response } });
+      } catch (error) {
+        if (!cancelled) {
+          toast.error(error?.message || 'Could not verify PhonePe payment.');
+        }
+      } finally {
+        if (!cancelled) {
+          setSubmitting(false);
+        }
+      }
+    };
+
+    verifyPhonePePayment();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activePaymentGateway?.slug, navigate, routeId]);
 
   const subtotalFare = Number(route?.baseFare || 0) * seatCount;
   const serviceTaxPercent = Number(route?.serviceTaxPercent || 0);
@@ -152,6 +231,11 @@ const AirwaysRouteBooking = () => {
   };
 
   const handleSubmit = async () => {
+    if (!activePaymentGateway) {
+      toast.error('No payment gateway is enabled in the admin panel right now.');
+      return;
+    }
+
     if (!formData.customerName.trim() || !formData.customerPhone.trim()) {
       toast.error('Passenger contact name and phone are required.');
       return;
@@ -164,39 +248,91 @@ const AirwaysRouteBooking = () => {
 
     try {
       setSubmitting(true);
+      const bookingPayload = buildBookingPayload();
 
-      if (paymentMethod === 'online') {
-        await new Promise((resolve) => window.setTimeout(resolve, 1300));
+      if (activePaymentGateway.slug === 'phone_pay') {
+        const session = await userService.createAirwayBookingOrder(bookingPayload);
+        if (!session?.checkoutUrl) {
+          throw new Error('Unable to start PhonePe payment');
+        }
+
+        window.sessionStorage.setItem(PHONEPE_PENDING_BOOKING_KEY, JSON.stringify(bookingPayload));
+        window.location.assign(session.checkoutUrl);
+        return;
       }
 
-      const booking = await userService.createAirwayBooking({
-        routeId: route.id,
-        seatCount,
-        customerName: formData.customerName,
-        customerPhone: formData.customerPhone,
-        customerEmail: formData.customerEmail,
-        passengerNames,
-        notes: formData.notes,
-        travelDate,
-        subtotalFare,
-        serviceTaxPercent,
-        serviceTaxAmount,
-        totalFare,
-        paymentMethod,
-        paymentMethodLabel:
-          paymentMethod === 'online'
-            ? activePaymentGateway?.label || 'Online'
-            : 'Counter payment',
-        paymentStatus: paymentMethod === 'online' ? 'paid' : 'pending',
-        gatewaySlug: activePaymentGateway?.slug || '',
+      if (activePaymentGateway.slug !== 'razor_pay') {
+        throw new Error(`${activePaymentGateway.label} is enabled by admin, but airway checkout is not implemented for it yet.`);
+      }
+
+      const scriptLoaded = await loadRazorpayScript();
+      if (!scriptLoaded) {
+        throw new Error('Razorpay SDK failed to load');
+      }
+
+      const order = await userService.createAirwayBookingOrder(bookingPayload);
+      if (!order?.keyId || !order?.orderId) {
+        throw new Error('Unable to start payment');
+      }
+
+      let userInfo = {};
+      try {
+        userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
+      } catch {
+        userInfo = {};
+      }
+
+      const rzp = new window.Razorpay({
+        key: order.keyId,
+        amount: order.amount,
+        currency: order.currency || 'INR',
+        name: route?.airway?.airlineName || 'Airways Booking',
+        description: `${route?.originAirport || ''} to ${route?.destinationAirport || ''}`.trim(),
+        order_id: order.orderId,
+        prefill: {
+          name: formData.customerName || userInfo?.name || '',
+          email: formData.customerEmail || userInfo?.email || '',
+          contact: formData.customerPhone || userInfo?.phone || '',
+        },
+        modal: {
+          ondismiss: () => {
+            setSubmitting(false);
+          },
+        },
+        handler: async (response) => {
+          try {
+            const booking = await userService.verifyAirwayBookingPayment({
+              gateway: 'razor_pay',
+              ...response,
+              ...bookingPayload,
+            });
+
+            toast.success('Seat booked and paid successfully.');
+            navigate(`/taxi/user/airways/confirmation/${booking.id}`, { state: { booking } });
+          } catch (error) {
+            toast.error(
+              error?.message ||
+              'Payment verification failed. Please contact support if payment was deducted.',
+            );
+          } finally {
+            setSubmitting(false);
+          }
+        },
+        theme: {
+          color: '#0f766e',
+        },
       });
 
-      toast.success(paymentMethod === 'online' ? 'Seat booked and paid successfully.' : 'Seat reserved successfully.');
-      navigate(`/taxi/user/airways/confirmation/${booking.id}`, { state: { booking } });
+      rzp.on('payment.failed', (event) => {
+        const message = event?.error?.description || event?.error?.reason || 'Payment failed';
+        toast.error(message);
+        setSubmitting(false);
+      });
+
+      rzp.open();
     } catch (error) {
       console.error(error);
       toast.error(error?.message || 'Could not complete helicopter booking.');
-    } finally {
       setSubmitting(false);
     }
   };
@@ -411,44 +547,26 @@ const AirwaysRouteBooking = () => {
             </div>
 
             <div className="mt-5 space-y-3">
-              {paymentOptions.map((option) => {
-                const active = paymentMethod === option.id;
-                return (
-                  <button
-                    key={option.id}
-                    type="button"
-                    onClick={() => setPaymentMethod(option.id)}
-                    className={`flex w-full items-center justify-between rounded-2xl border px-4 py-4 text-left transition-all ${
-                      active
-                        ? 'border-sky-200 bg-sky-50 shadow-sm'
-                        : 'border-slate-100 bg-slate-50/70'
-                    }`}
-                  >
-                    <div>
-                      <p className="text-sm font-black text-slate-950">{option.title}</p>
-                      <p className="mt-1 text-xs font-semibold text-slate-500">{option.subtitle}</p>
-                    </div>
-                    {active ? (
-                      <div className="rounded-full bg-sky-600 p-1 text-white">
-                        <CheckCircle2 size={16} />
-                      </div>
-                    ) : (
-                      <div className="h-5 w-5 rounded-full border border-slate-300" />
-                    )}
-                  </button>
-                );
-              })}
+              <div className="flex w-full items-center justify-between rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-left shadow-sm">
+                <div>
+                  <p className="text-sm font-black text-slate-950">{activePaymentGateway?.label || 'No payment gateway enabled'}</p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    {activePaymentGateway
+                      ? 'Secure online checkout for this helicopter booking'
+                      : 'Enable a payment gateway in Taxi Admin to accept online bookings here'}
+                  </p>
+                </div>
+                <div className="rounded-full bg-sky-600 p-1 text-white">
+                  <CheckCircle2 size={16} />
+                </div>
+              </div>
             </div>
 
-            {paymentMethod === 'online' ? (
-              <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
-                Online confirmation is enabled because {activePaymentGateway?.label || 'the active gateway'} is turned on from the admin panel.
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-800">
-                Your seat will be reserved now and payment can be completed at the helicopter boarding counter.
-              </div>
-            )}
+            <div className={`mt-4 rounded-2xl px-4 py-3 text-sm font-bold ${activePaymentGateway ? 'border border-emerald-100 bg-emerald-50 text-emerald-800' : 'border border-amber-100 bg-amber-50 text-amber-800'}`}>
+              {activePaymentGateway
+                ? `Bookings on this route will use ${activePaymentGateway.label} because that is the gateway currently enabled in Taxi Admin.`
+                : 'No gateway is enabled in Taxi Admin right now, so payment cannot be completed from this screen.'}
+            </div>
           </div>
 
           <div className="rounded-[30px] border border-slate-950 bg-slate-950 p-5 text-white shadow-[0_24px_48px_rgba(15,23,42,0.28)]">
@@ -504,17 +622,15 @@ const AirwaysRouteBooking = () => {
             <button
               type="button"
               onClick={handleSubmit}
-              disabled={submitting}
+              disabled={submitting || !activePaymentGateway}
               className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 shadow-[0_16px_28px_rgba(255,255,255,0.14)] disabled:opacity-60"
             >
               <FileText size={16} />
               {submitting
-                ? paymentMethod === 'online'
-                  ? `Processing ${activePaymentGateway?.label || 'payment'}...`
-                  : 'Reserving seat...'
-                : paymentMethod === 'online'
-                  ? `Pay ${formatCurrency(totalFare)} and Confirm`
-                  : 'Reserve Seat Now'}
+                ? `Processing ${activePaymentGateway?.label || 'payment'}...`
+                : activePaymentGateway
+                  ? `Pay ${formatCurrency(totalFare)} with ${activePaymentGateway.label}`
+                  : 'Enable a payment gateway in admin'}
             </button>
           </div>
         </section>

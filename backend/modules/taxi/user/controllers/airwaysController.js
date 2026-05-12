@@ -1,9 +1,12 @@
+import crypto from 'node:crypto';
 import mongoose from 'mongoose';
 import { Airway } from '../../admin/models/Airway.js';
 import { AirwayRoute } from '../../admin/models/AirwayRoute.js';
 import { AirwayBooking } from '../../admin/models/AirwayBooking.js';
 import { ApiError } from '../../../../utils/ApiError.js';
 import { asyncHandler } from '../../../../utils/asyncHandler.js';
+import { env } from '../../../../config/env.js';
+import { getActivePaymentGateway, resolveConfiguredGatewayCredentials } from '../../services/paymentGatewayService.js';
 
 const ok = (res, data, message) => res.status(200).json({ success: true, data, message });
 const created = (res, data, message) => res.status(201).json({ success: true, data, message });
@@ -25,6 +28,89 @@ const getTravelDayToken = (value) => {
 };
 
 const getCurrentUserId = (req) => String(req.auth?.sub || req.user?._id || '').trim();
+const getFrontendBaseUrl = () => {
+  const configuredOrigin = String(env.corsOrigin || '')
+    .split(',')
+    .map((value) => value.trim())
+    .find((value) => value && value !== '*');
+
+  return (configuredOrigin || 'http://localhost:5173').replace(/\/+$/, '');
+};
+
+const getPhonePeBaseUrl = (environment = 'test') => (
+  String(environment).trim().toLowerCase() === 'production'
+    ? 'https://api.phonepe.com/apis/hermes'
+    : 'https://api-preprod.phonepe.com/apis/pg-sandbox'
+);
+
+const buildPhonePeChecksum = ({ payload = '', path = '', saltKey = '', saltIndex = '1' }) => {
+  const digest = crypto
+    .createHash('sha256')
+    .update(`${payload}${path}${saltKey}`)
+    .digest('hex');
+
+  return `${digest}###${saltIndex}`;
+};
+
+const phonePeRequest = async ({
+  method,
+  path,
+  body,
+  merchantId,
+  saltKey,
+  saltIndex,
+  environment,
+}) => {
+  const normalizedMethod = String(method || 'GET').trim().toUpperCase();
+  const encodedPayload =
+    body && normalizedMethod !== 'GET'
+      ? Buffer.from(JSON.stringify(body)).toString('base64')
+      : '';
+  const response = await fetch(`${getPhonePeBaseUrl(environment)}${path}`, {
+    method: normalizedMethod,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-VERIFY': buildPhonePeChecksum({
+        payload: encodedPayload,
+        path,
+        saltKey,
+        saltIndex,
+      }),
+      'X-MERCHANT-ID': merchantId,
+      accept: 'application/json',
+    },
+    body: encodedPayload ? JSON.stringify({ request: encodedPayload }) : undefined,
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || payload?.success === false) {
+    throw new ApiError(
+      response.status || 502,
+      payload?.message || payload?.code || 'PhonePe request failed',
+    );
+  }
+
+  return payload;
+};
+
+const razorpayRequest = async ({ method, path, body, keyId, keySecret }) => {
+  const credentials = Buffer.from(`${keyId}:${keySecret}`).toString('base64');
+  const response = await fetch(`https://api.razorpay.com/v1${path}`, {
+    method,
+    headers: {
+      Authorization: `Basic ${credentials}`,
+      'Content-Type': 'application/json',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new ApiError(response.status || 502, payload?.error?.description || payload?.error?.message || 'Razorpay request failed');
+  }
+
+  return payload;
+};
 
 const getSeatInventoryObject = (seatInventory) =>
   seatInventory instanceof Map
@@ -109,12 +195,143 @@ const serializeBooking = (item = {}) => ({
   notes: item.notes || '',
   passengerNames: Array.isArray(item.passengerNames) ? item.passengerNames : [],
   gatewaySlug: item.gatewaySlug || '',
+  gatewayOrderId: item.gatewayOrderId || '',
+  gatewayPaymentId: item.gatewayPaymentId || '',
+  gatewayTransactionId: item.gatewayTransactionId || '',
   createdAt: item.createdAt || null,
   updatedAt: item.updatedAt || null,
 });
 
 const buildBookingCode = () =>
   `HL-${new mongoose.Types.ObjectId().toString().slice(-6).toUpperCase()}`;
+
+const resolveBookingDraft = async (payload = {}, userId = '') => {
+  if (!userId) {
+    throw new ApiError(401, 'User authentication is required');
+  }
+
+  const route = await AirwayRoute.findById(payload?.routeId).populate('airwayId');
+  if (!route || !route.airwayId) {
+    throw new ApiError(404, 'Selected helicopter route is no longer available');
+  }
+  if (toLower(route.airwayId.status) !== 'active' || toLower(route.routeStatus) !== 'scheduled') {
+    throw new ApiError(400, 'Selected helicopter route is not available right now');
+  }
+
+  const customerName = toText(payload?.customerName);
+  const customerPhone = toText(payload?.customerPhone);
+  if (!customerName || !customerPhone) {
+    throw new ApiError(400, 'Passenger contact name and phone are required');
+  }
+
+  const seatCount = Math.max(1, toNumber(payload?.seatCount, 1));
+  const availableSeats = getAvailableSeatCount(route);
+  if (seatCount > availableSeats) {
+    throw new ApiError(400, `Only ${availableSeats} seat${availableSeats === 1 ? '' : 's'} left on this route`);
+  }
+
+  const passengerNames = Array.isArray(payload?.passengerNames)
+    ? payload.passengerNames.map((item) => toText(item)).filter(Boolean)
+    : [];
+  if (passengerNames.length !== seatCount) {
+    throw new ApiError(400, 'Please enter every passenger name before booking');
+  }
+
+  const basePrice = toNumber(route.airwayId.basePrice, 0);
+  const defaultSubtotalFare = basePrice * seatCount;
+  const subtotalFare = Math.max(0, toNumber(payload?.subtotalFare, defaultSubtotalFare));
+  const serviceTaxPercent = Math.max(0, toNumber(payload?.serviceTaxPercent, route.airwayId.serviceTaxPercent || 0));
+  const serviceTaxAmount = Math.max(0, toNumber(payload?.serviceTaxAmount, (subtotalFare * serviceTaxPercent) / 100));
+  const totalFare = Math.max(0, toNumber(payload?.totalFare, subtotalFare + serviceTaxAmount));
+
+  return {
+    userId,
+    route,
+    customerName,
+    customerPhone,
+    customerEmail: toText(payload?.customerEmail).toLowerCase(),
+    seatCount,
+    passengerNames,
+    subtotalFare,
+    serviceTaxPercent,
+    serviceTaxAmount,
+    totalFare,
+    travelDate: payload?.travelDate ? new Date(payload.travelDate) : new Date(),
+    notes: toText(payload?.notes),
+  };
+};
+
+const finalizeBooking = async ({
+  draft,
+  paymentMethod = 'online',
+  paymentMethodLabel = '',
+  paymentStatus = 'paid',
+  gatewaySlug = '',
+  gatewayOrderId = '',
+  gatewayPaymentId = '',
+  gatewayTransactionId = '',
+}) => {
+  const existingBooking =
+    gatewayPaymentId
+      ? await AirwayBooking.findOne({
+        userId: draft.userId,
+        gatewayPaymentId,
+      })
+      : gatewayTransactionId
+        ? await AirwayBooking.findOne({
+          userId: draft.userId,
+          gatewayTransactionId,
+        })
+        : null;
+
+  if (existingBooking) {
+    return existingBooking;
+  }
+
+  const availableSeats = getAvailableSeatCount(draft.route);
+  if (draft.seatCount > availableSeats) {
+    throw new ApiError(409, `Only ${availableSeats} seat${availableSeats === 1 ? '' : 's'} left on this route`);
+  }
+
+  const booking = await AirwayBooking.create({
+    bookingCode: buildBookingCode(),
+    userId: draft.userId,
+    airwayId: draft.route.airwayId._id,
+    routeId: draft.route._id,
+    airwayName: draft.route.airwayId.airlineName || '',
+    routeName: draft.route.routeName || '',
+    flightNumber: draft.route.flightNumber || '',
+    customerName: draft.customerName,
+    customerPhone: draft.customerPhone,
+    customerEmail: draft.customerEmail,
+    seatClass: 'Helicopter Cabin',
+    seatCount: draft.seatCount,
+    subtotalFare: draft.subtotalFare,
+    serviceTaxAmount: draft.serviceTaxAmount,
+    serviceTaxPercent: draft.serviceTaxPercent,
+    totalFare: draft.totalFare,
+    travelDate: draft.travelDate,
+    paymentMethod,
+    paymentMethodLabel,
+    paymentStatus,
+    bookingStatus: 'confirmed',
+    notes: draft.notes,
+    passengerNames: draft.passengerNames,
+    gatewaySlug,
+    gatewayOrderId,
+    gatewayPaymentId,
+    gatewayTransactionId,
+  });
+
+  const currentInventory = getSeatInventoryObject(draft.route.seatInventory);
+  draft.route.seatInventory = {
+    ...currentInventory,
+    'Helicopter Cabin': Math.max(0, availableSeats - draft.seatCount),
+  };
+  await draft.route.save();
+
+  return booking;
+};
 
 export const searchAirwayRoutes = asyncHandler(async (req, res) => {
   const { origin = '', destination = '', query = '', travelDate = '' } = req.query;
@@ -177,79 +394,206 @@ export const getAirwayRouteDetails = asyncHandler(async (req, res) => {
 
 export const createAirwayBooking = asyncHandler(async (req, res) => {
   const userId = getCurrentUserId(req);
-  if (!userId) {
-    throw new ApiError(401, 'User authentication is required');
+  const draft = await resolveBookingDraft(req.body, userId);
+  const requestedPaymentMethod = toLower(req.body?.paymentMethod);
+  const requestedPaymentStatus = toLower(req.body?.paymentStatus);
+
+  if (requestedPaymentMethod === 'online' || requestedPaymentStatus === 'paid') {
+    throw new ApiError(400, 'Use the airway payment verification flow for online bookings');
   }
 
-  const route = await AirwayRoute.findById(req.body?.routeId).populate('airwayId');
-  if (!route || !route.airwayId) {
-    throw new ApiError(404, 'Selected helicopter route is no longer available');
-  }
-  if (toLower(route.airwayId.status) !== 'active' || toLower(route.routeStatus) !== 'scheduled') {
-    throw new ApiError(400, 'Selected helicopter route is not available right now');
-  }
-
-  const customerName = toText(req.body?.customerName);
-  const customerPhone = toText(req.body?.customerPhone);
-  if (!customerName || !customerPhone) {
-    throw new ApiError(400, 'Passenger contact name and phone are required');
-  }
-
-  const seatCount = Math.max(1, toNumber(req.body?.seatCount, 1));
-  const availableSeats = getAvailableSeatCount(route);
-  if (seatCount > availableSeats) {
-    throw new ApiError(400, `Only ${availableSeats} seat${availableSeats === 1 ? '' : 's'} left on this route`);
-  }
-
-  const passengerNames = Array.isArray(req.body?.passengerNames)
-    ? req.body.passengerNames.map((item) => toText(item)).filter(Boolean)
-    : [];
-  if (passengerNames.length !== seatCount) {
-    throw new ApiError(400, 'Please enter every passenger name before booking');
-  }
-
-  const subtotalFare = Math.max(0, toNumber(req.body?.subtotalFare, toNumber(route.airwayId.basePrice, 0) * seatCount));
-  const serviceTaxPercent = Math.max(0, toNumber(req.body?.serviceTaxPercent, route.airwayId.serviceTaxPercent || 0));
-  const serviceTaxAmount = Math.max(0, toNumber(req.body?.serviceTaxAmount, (subtotalFare * serviceTaxPercent) / 100));
-  const totalFare = Math.max(0, toNumber(req.body?.totalFare, subtotalFare + serviceTaxAmount));
-
-  const booking = await AirwayBooking.create({
-    bookingCode: buildBookingCode(),
-    userId,
-    airwayId: route.airwayId._id,
-    routeId: route._id,
-    airwayName: route.airwayId.airlineName || '',
-    routeName: route.routeName || '',
-    flightNumber: route.flightNumber || '',
-    customerName,
-    customerPhone,
-    customerEmail: toText(req.body?.customerEmail).toLowerCase(),
-    seatClass: 'Helicopter Cabin',
-    seatCount,
-    subtotalFare,
-    serviceTaxAmount,
-    serviceTaxPercent,
-    totalFare,
-    travelDate: req.body?.travelDate ? new Date(req.body.travelDate) : new Date(),
-    paymentMethod: toLower(req.body?.paymentMethod) === 'online' ? 'online' : 'reserve',
+  const booking = await finalizeBooking({
+    draft,
+    paymentMethod: 'reserve',
     paymentMethodLabel: toText(req.body?.paymentMethodLabel),
-    paymentStatus: ['pending', 'paid', 'failed', 'refunded'].includes(toLower(req.body?.paymentStatus))
-      ? toLower(req.body?.paymentStatus)
+    paymentStatus: ['pending', 'failed', 'refunded'].includes(requestedPaymentStatus)
+      ? requestedPaymentStatus
       : 'pending',
-    bookingStatus: 'confirmed',
-    notes: toText(req.body?.notes),
-    passengerNames,
     gatewaySlug: toText(req.body?.gatewaySlug),
+    gatewayOrderId: toText(req.body?.gatewayOrderId),
+    gatewayPaymentId: toText(req.body?.gatewayPaymentId),
+    gatewayTransactionId: toText(req.body?.gatewayTransactionId),
   });
 
-  const currentInventory = getSeatInventoryObject(route.seatInventory);
-  route.seatInventory = {
-    ...currentInventory,
-    'Helicopter Cabin': Math.max(0, availableSeats - seatCount),
-  };
-  await route.save();
-
   return created(res, serializeBooking(booking), 'Airway booking created successfully');
+});
+
+export const createAirwayBookingOrder = asyncHandler(async (req, res) => {
+  const userId = getCurrentUserId(req);
+  const draft = await resolveBookingDraft(req.body, userId);
+  const activeGateway = await getActivePaymentGateway();
+
+  if (!activeGateway) {
+    throw new ApiError(400, 'No payment gateway is enabled in the admin panel right now.');
+  }
+
+  if (activeGateway.slug === 'razor_pay') {
+    const { keyId, keySecret } = await resolveConfiguredGatewayCredentials('razor_pay');
+    const compactUserId = userId.replace(/[^a-zA-Z0-9]/g, '').slice(-8) || 'usr';
+    const order = await razorpayRequest({
+      method: 'POST',
+      path: '/orders',
+      body: {
+        amount: Math.round(draft.totalFare * 100),
+        currency: 'INR',
+        receipt: `air_${compactUserId}_${Date.now().toString(36)}`,
+        notes: {
+          userId,
+          routeId: String(draft.route._id),
+          seatCount: String(draft.seatCount),
+        },
+      },
+      keyId,
+      keySecret,
+    });
+
+    return created(res, {
+      gateway: 'razor_pay',
+      label: activeGateway.label,
+      keyId,
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency || 'INR',
+    }, 'Airway payment order created successfully');
+  }
+
+  if (activeGateway.slug === 'phone_pay') {
+    const { merchantId, saltKey, saltIndex, environment } = await resolveConfiguredGatewayCredentials('phone_pay');
+    const compactUserId = userId.replace(/[^a-zA-Z0-9]/g, '').slice(-8) || 'usr';
+    const merchantTransactionId = `UAIR${Date.now()}${compactUserId}`.slice(0, 34);
+    const frontendBaseUrl = getFrontendBaseUrl();
+    const redirectUrl = `${frontendBaseUrl}/taxi/user/airways/routes/${encodeURIComponent(String(draft.route._id))}?phonepe_txn=${encodeURIComponent(merchantTransactionId)}`;
+    const callbackUrl = `${req.protocol}://${req.get('host')}/api/v1/common/payment-gateway/phonepe/callback`;
+
+    const payload = await phonePeRequest({
+      method: 'POST',
+      path: '/pg/v1/pay',
+      body: {
+        merchantId,
+        merchantTransactionId,
+        merchantUserId: compactUserId,
+        amount: Math.round(draft.totalFare * 100),
+        redirectUrl,
+        redirectMode: 'GET',
+        callbackUrl,
+        paymentInstrument: {
+          type: 'PAY_PAGE',
+        },
+      },
+      merchantId,
+      saltKey,
+      saltIndex,
+      environment,
+    });
+
+    const checkoutUrl = payload?.data?.instrumentResponse?.redirectInfo?.url || '';
+    if (!checkoutUrl) {
+      throw new ApiError(502, 'PhonePe payment URL was not returned');
+    }
+
+    return created(res, {
+      gateway: 'phone_pay',
+      label: activeGateway.label,
+      merchantTransactionId,
+      amount: Math.round(draft.totalFare * 100),
+      currency: 'INR',
+      checkoutUrl,
+      method: payload?.data?.instrumentResponse?.redirectInfo?.method || 'GET',
+    }, 'Airway PhonePe session created successfully');
+  }
+
+  throw new ApiError(400, `${activeGateway.label} is enabled by admin, but airway checkout is not implemented for it yet.`);
+});
+
+export const verifyAirwayBookingPayment = asyncHandler(async (req, res) => {
+  const userId = getCurrentUserId(req);
+  const draft = await resolveBookingDraft(req.body, userId);
+  const gateway = toText(req.body?.gateway || req.body?.gatewaySlug).toLowerCase();
+
+  if (gateway === 'razor_pay') {
+    const orderId = toText(req.body?.razorpay_order_id);
+    const paymentId = toText(req.body?.razorpay_payment_id);
+    const signature = toText(req.body?.razorpay_signature);
+
+    if (!orderId || !paymentId || !signature) {
+      throw new ApiError(400, 'Payment verification fields are required');
+    }
+
+    const { keySecret } = await resolveConfiguredGatewayCredentials('razor_pay');
+    const expectedSignature = crypto
+      .createHmac('sha256', keySecret)
+      .update(`${orderId}|${paymentId}`)
+      .digest('hex');
+
+    if (expectedSignature !== signature) {
+      throw new ApiError(400, 'Invalid payment signature');
+    }
+
+    const booking = await finalizeBooking({
+      draft,
+      paymentMethod: 'online',
+      paymentMethodLabel: 'Razorpay',
+      paymentStatus: 'paid',
+      gatewaySlug: 'razor_pay',
+      gatewayOrderId: orderId,
+      gatewayPaymentId: paymentId,
+    });
+
+    return ok(res, serializeBooking(booking), 'Airway booking confirmed successfully');
+  }
+
+  if (gateway === 'phone_pay') {
+    const merchantTransactionId = toText(req.body?.merchantTransactionId || req.body?.transactionId);
+    if (!merchantTransactionId) {
+      throw new ApiError(400, 'merchantTransactionId is required');
+    }
+
+    const { merchantId, saltKey, saltIndex, environment } = await resolveConfiguredGatewayCredentials('phone_pay');
+    const payload = await phonePeRequest({
+      method: 'GET',
+      path: `/pg/v1/status/${encodeURIComponent(merchantId)}/${encodeURIComponent(merchantTransactionId)}`,
+      merchantId,
+      saltKey,
+      saltIndex,
+      environment,
+    });
+
+    const paymentState = String(payload?.data?.state || payload?.data?.paymentState || '').trim().toUpperCase();
+    const paymentId = toText(payload?.data?.transactionId || merchantTransactionId);
+
+    if (paymentState === 'COMPLETED') {
+      const booking = await finalizeBooking({
+        draft,
+        paymentMethod: 'online',
+        paymentMethodLabel: 'PhonePe',
+        paymentStatus: 'paid',
+        gatewaySlug: 'phone_pay',
+        gatewayTransactionId: merchantTransactionId,
+        gatewayPaymentId: paymentId,
+      });
+
+      return ok(res, serializeBooking(booking), 'Airway booking confirmed successfully');
+    }
+
+    if (paymentState === 'PENDING') {
+      return ok(res, {
+        status: 'pending',
+        gateway: 'phone_pay',
+        merchantTransactionId,
+        transactionId: paymentId,
+      }, payload?.message || 'PhonePe payment is still pending');
+    }
+
+    return ok(res, {
+      status: 'failed',
+      gateway: 'phone_pay',
+      merchantTransactionId,
+      transactionId: paymentId,
+      code: payload?.code || payload?.data?.responseCode || '',
+    }, payload?.message || 'PhonePe payment was not completed');
+  }
+
+  throw new ApiError(400, 'Unsupported airway payment gateway');
 });
 
 export const getMyAirwayBooking = asyncHandler(async (req, res) => {
@@ -264,4 +608,38 @@ export const getMyAirwayBooking = asyncHandler(async (req, res) => {
   }
 
   return ok(res, serializeBooking(booking), 'Airway booking fetched successfully');
+});
+
+export const listMyAirwayBookings = asyncHandler(async (req, res) => {
+  const userId = getCurrentUserId(req);
+  if (!userId) {
+    throw new ApiError(401, 'User authentication is required');
+  }
+
+  const page = Math.max(1, Number(req.query?.page) || 1);
+  const limit = Math.min(100, Math.max(1, Number(req.query?.limit) || 10));
+  const skip = (page - 1) * limit;
+
+  const [items, total] = await Promise.all([
+    AirwayBooking.find({ userId })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .lean(),
+    AirwayBooking.countDocuments({ userId }),
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+
+  return ok(res, {
+    results: items.map(serializeBooking),
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages,
+      hasNextPage: page < totalPages,
+      hasPrevPage: page > 1,
+    },
+  }, 'Airway bookings fetched successfully');
 });

@@ -188,7 +188,12 @@ export const SettingsProvider = ({ children }) => {
           : DEFAULT_SETTINGS_CONTEXT.settings.bidRide;
       const activePaymentGateway =
         paymentGatewayRes?.status === 'fulfilled'
-          ? (paymentGatewayRes.value?.data?.activeGateway || paymentGatewayRes.value?.activeGateway || null)
+          ? (
+            paymentGatewayRes.value?.data?.data?.activeGateway ||
+            paymentGatewayRes.value?.data?.activeGateway ||
+            paymentGatewayRes.value?.activeGateway ||
+            null
+          )
           : null;
 
       setSettings({

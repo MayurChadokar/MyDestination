@@ -127,6 +127,24 @@ const airwayBookingSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    gatewayOrderId: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true,
+    },
+    gatewayPaymentId: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true,
+    },
+    gatewayTransactionId: {
+      type: String,
+      default: '',
+      trim: true,
+      index: true,
+    },
   },
   { timestamps: true },
 );

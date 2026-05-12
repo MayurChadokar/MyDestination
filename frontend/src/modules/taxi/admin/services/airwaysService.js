@@ -118,5 +118,14 @@ export const getUserAirwayRoute = async (routeId) =>
 export const getUserAirwayBooking = async (bookingId) =>
   unwrapPayload(await api.get(`/users/airways/bookings/${bookingId}`));
 
+export const getUserAirwayBookings = async (params = {}) =>
+  unwrapPayload(await api.get('/users/airways/bookings', { params }));
+
 export const createUserAirwayBooking = async (payload = {}) =>
   unwrapPayload(await api.post('/users/airways/bookings', payload));
+
+export const createUserAirwayBookingOrder = async (payload = {}) =>
+  unwrapPayload(await api.post('/users/airways/bookings/order', payload));
+
+export const verifyUserAirwayBookingPayment = async (payload = {}) =>
+  unwrapPayload(await api.post('/users/airways/bookings/verify', payload));

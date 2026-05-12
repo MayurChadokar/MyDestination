@@ -16,6 +16,7 @@ import {
   Ticket,
   UserRound,
   Users,
+  Clock3,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSettings } from '../../../shared/context/SettingsContext';
@@ -37,6 +38,24 @@ const formatTravelDate = (value) => {
     return 'Select travel date';
   }
   return parsed.toLocaleDateString('en-IN', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+};
+
+const formatTimeLabel = (value = '') => {
+  const normalized = String(value || '').trim();
+  if (!normalized) {
+    return '--';
+  }
+
+  const date = new Date(`2000-01-01T${normalized}`);
+  if (Number.isNaN(date.getTime())) {
+    return normalized;
+  }
+
+  return date.toLocaleTimeString('en-IN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
 };
 
 const readStoredUser = () => {
@@ -74,6 +93,7 @@ const AirwaysRouteBooking = () => {
   const [route, setRoute] = useState(null);
   const [seatCount, setSeatCount] = useState(1);
   const [travelDate, setTravelDate] = useState(location.state?.travelDate || tomorrowDateValue());
+  const [selectedAirwayId, setSelectedAirwayId] = useState(location.state?.selectedAirwayId || '');
   const [passengerNames, setPassengerNames] = useState(['']);
   const [formData, setFormData] = useState(() => {
     const storedUser = readStoredUser();
@@ -86,8 +106,20 @@ const AirwaysRouteBooking = () => {
   });
   const paymentMethod = 'online';
 
+  const routeAirways = Array.isArray(route?.airways) && route.airways.length > 0
+    ? route.airways
+    : route?.airway
+      ? [route.airway]
+      : [];
+  const selectedAirway = routeAirways.find((item) => item?.id === selectedAirwayId) || routeAirways[0] || route?.airway || null;
+  const subtotalFare = Number(selectedAirway?.basePrice || route?.baseFare || 0) * seatCount;
+  const serviceTaxPercent = Number(selectedAirway?.serviceTaxPercent || route?.serviceTaxPercent || 0);
+  const serviceTaxAmount = (subtotalFare * serviceTaxPercent) / 100;
+  const totalFare = subtotalFare + serviceTaxAmount;
+
   const buildBookingPayload = () => ({
     routeId: route?.id,
+    selectedAirwayId: selectedAirway?.id || selectedAirwayId || route?.airway?.id || '',
     seatCount,
     customerName: formData.customerName,
     customerPhone: formData.customerPhone,
@@ -113,6 +145,16 @@ const AirwaysRouteBooking = () => {
           toast.error('Helicopter route not found.');
           navigate('/taxi/user/airways', { replace: true });
           return;
+        }
+        const routeAirwayIds = Array.isArray(nextRoute?.airways) ? nextRoute.airways.map((item) => item.id).filter(Boolean) : [];
+        if (routeAirwayIds.length > 0) {
+          setSelectedAirwayId((current) => (
+            current && routeAirwayIds.includes(current)
+              ? current
+              : (location.state?.selectedAirwayId && routeAirwayIds.includes(location.state.selectedAirwayId))
+                ? location.state.selectedAirwayId
+                : routeAirwayIds[0]
+          ));
         }
         setRoute(nextRoute);
       } catch (error) {
@@ -207,11 +249,6 @@ const AirwaysRouteBooking = () => {
     };
   }, [activePaymentGateway?.slug, navigate, routeId]);
 
-  const subtotalFare = Number(route?.baseFare || 0) * seatCount;
-  const serviceTaxPercent = Number(route?.serviceTaxPercent || 0);
-  const serviceTaxAmount = (subtotalFare * serviceTaxPercent) / 100;
-  const totalFare = subtotalFare + serviceTaxAmount;
-
   const setField = (key, value) => {
     setFormData((current) => ({ ...current, [key]: value }));
   };
@@ -286,7 +323,7 @@ const AirwaysRouteBooking = () => {
         key: order.keyId,
         amount: order.amount,
         currency: order.currency || 'INR',
-        name: route?.airway?.airlineName || 'Airways Booking',
+        name: selectedAirway?.airlineName || route?.airway?.airlineName || 'Airways Booking',
         description: `${route?.originAirport || ''} to ${route?.destinationAirport || ''}`.trim(),
         order_id: order.orderId,
         prefill: {
@@ -319,7 +356,7 @@ const AirwaysRouteBooking = () => {
           }
         },
         theme: {
-          color: '#0f766e',
+          color: '#0ea5e9',
         },
       });
 
@@ -339,7 +376,7 @@ const AirwaysRouteBooking = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 px-5 py-6">
+      <div className="min-h-screen bg-[#F8FAFC] px-5 py-6">
         <div className="mx-auto max-w-lg space-y-4">
           <div className="h-12 animate-pulse rounded-2xl bg-slate-200" />
           <div className="h-64 animate-pulse rounded-[32px] bg-white shadow-sm" />
@@ -352,288 +389,277 @@ const AirwaysRouteBooking = () => {
   if (!route) return null;
 
   return (
-    <div className="min-h-screen bg-[linear-gradient(180deg,#f8fafc_0%,#eef2ff_42%,#ffffff_100%)] pb-24 font-sans">
-      <div className="mx-auto max-w-lg px-5 pb-10 pt-5">
+    <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans no-scrollbar">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-5 py-4">
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => navigate('/taxi/user/airways')}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl border border-white/80 bg-white/90 text-slate-700 shadow-sm"
+            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-700 active:scale-95 transition-transform"
           >
             <ArrowLeft size={18} />
           </button>
-          <div className="rounded-full border border-emerald-100 bg-white/90 px-4 py-2 text-[10px] font-black uppercase tracking-[0.22em] text-emerald-700 shadow-sm">
-            Route Checkout
+          <h1 className="text-sm font-black text-slate-950 uppercase tracking-widest">Review & Pay</h1>
+          <div className="w-10" />
+        </div>
+      </div>
+
+      <div className="mx-auto max-w-lg px-5 py-6 space-y-6">
+        {/* Ticket Header Card */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="relative overflow-hidden rounded-[40px] bg-slate-950 p-8 text-white shadow-2xl"
+        >
+          <div className="relative z-10">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400">Flight Route</p>
+                <h2 className="mt-2 text-2xl font-black">{route.routeName}</h2>
+              </div>
+              <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
+                <PlaneTakeoff size={24} className="text-sky-400" />
+              </div>
+            </div>
+
+            <div className="mt-8 flex items-center justify-between">
+              <div className="space-y-1">
+                <p className="text-3xl font-black">{route.originAirport}</p>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{formatTimeLabel(route.departureTime)}</p>
+              </div>
+              <div className="flex flex-col items-center gap-2">
+                <div className="px-3 py-1 rounded-full bg-white/10 text-[9px] font-black uppercase tracking-widest text-white/60">
+                  {route.durationMinutes} mins
+                </div>
+                <div className="flex items-center gap-1.5 w-20">
+                  <div className="h-1 w-1 rounded-full bg-white/40" />
+                  <div className="h-px flex-1 bg-white/20" />
+                  <PlaneTakeoff size={14} className="text-sky-400" />
+                  <div className="h-px flex-1 bg-white/20" />
+                  <div className="h-1 w-1 rounded-full bg-white/40" />
+                </div>
+                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Direct</p>
+              </div>
+              <div className="space-y-1 text-right">
+                <p className="text-3xl font-black">{route.destinationAirport}</p>
+                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{formatTimeLabel(route.arrivalTime)}</p>
+              </div>
+            </div>
+
+            <div className="mt-8 pt-8 border-t border-white/10 flex items-center justify-between">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Travel Date</p>
+                <p className="mt-1 text-sm font-black">{formatTravelDate(travelDate)}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Aircraft</p>
+                <p className="mt-1 text-sm font-black">{selectedAirway?.airlineName || 'Helicopter'}</p>
+              </div>
+            </div>
+          </div>
+          <div className="absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-sky-500/10 blur-[100px]" />
+          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-orange-500/10 blur-[100px]" />
+        </motion.div>
+
+        {/* Flight Selector (if multiple) */}
+        {routeAirways.length > 1 && (
+          <section className="space-y-3">
+            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest ml-1">Change Operator</h3>
+            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+              {routeAirways.map((airway) => (
+                <button
+                  key={airway.id}
+                  onClick={() => setSelectedAirwayId(airway.id)}
+                  className={`min-w-[180px] rounded-3xl p-4 border transition-all ${
+                    selectedAirwayId === airway.id
+                      ? 'bg-white border-sky-500 shadow-md ring-4 ring-sky-500/5'
+                      : 'bg-white border-slate-100 text-slate-400'
+                  }`}
+                >
+                  <p className="text-[10px] font-black uppercase tracking-widest">{airway.airlineCode}</p>
+                  <p className={`text-sm font-black mt-1 ${selectedAirwayId === airway.id ? 'text-slate-950' : ''}`}>{airway.airlineName}</p>
+                  <p className="text-[10px] font-bold mt-2">{formatCurrency(airway.basePrice)}</p>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Passengers & Date Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-sky-50 flex items-center justify-center text-sky-600">
+                <Users size={18} />
+              </div>
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Seats</p>
+                <div className="flex items-center gap-4 mt-1">
+                  <button
+                    onClick={() => handleSeatAdjust('decrement')}
+                    className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-900 active:bg-slate-100 transition-colors"
+                  >
+                    -
+                  </button>
+                  <span className="text-lg font-black">{seatCount}</span>
+                  <button
+                    onClick={() => handleSeatAdjust('increment')}
+                    className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-900 active:bg-slate-100 transition-colors"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
+                <CalendarDays size={18} />
+              </div>
+              <div className="flex-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Travel Date</p>
+                <input
+                  type="date"
+                  value={travelDate}
+                  onChange={(e) => setTravelDate(e.target.value)}
+                  className="w-full bg-transparent mt-1 text-sm font-black text-slate-900 outline-none"
+                />
+              </div>
+            </div>
           </div>
         </div>
 
-        <motion.section
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-5 overflow-hidden rounded-[34px] border border-white/80 bg-[linear-gradient(135deg,#082f49_0%,#0f766e_55%,#22c55e_100%)] p-6 text-white shadow-[0_28px_56px_rgba(15,118,110,0.24)]"
-        >
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-100/80">{route.airway?.airlineName}</p>
-              <h1 className="mt-2 text-[28px] font-black leading-none tracking-tight">{route.routeName}</h1>
-              <p className="mt-2 text-sm font-semibold text-emerald-50/85">{route.flightNumber} | Pilot {route.airway?.pilotName}</p>
+        {/* Contact Details */}
+        <section className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600">
+              <UserRound size={18} />
             </div>
-            <div className="rounded-3xl border border-white/15 bg-white/10 p-4">
-              <PlaneTakeoff size={24} />
-            </div>
+            <h3 className="text-sm font-black text-slate-950 uppercase tracking-widest">Contact Details</h3>
           </div>
 
-          <div className="mt-6 flex items-center gap-2 text-[15px] font-black">
-            <span>{route.originAirport}</span>
-            <ChevronRight size={14} />
-            <span>{route.destinationAirport}</span>
-          </div>
-
-          <div className="mt-5 grid grid-cols-3 gap-3">
-            <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/50">Seats Left</p>
-              <p className="mt-2 text-sm font-black">{route.availableSeats}</p>
-            </div>
-            <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/50">Duration</p>
-              <p className="mt-2 text-sm font-black">{route.durationMinutes} mins</p>
-            </div>
-            <div className="rounded-2xl bg-white/10 p-3">
-              <p className="text-[9px] font-black uppercase tracking-[0.18em] text-white/50">Price</p>
-              <p className="mt-2 text-sm font-black">{formatCurrency(route.totalFare)}</p>
-            </div>
-          </div>
-        </motion.section>
-
-        <section className="mt-5 space-y-5">
-          <div className="rounded-[30px] border border-white/80 bg-white/95 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Travel details</p>
-                <h2 className="mt-1 text-[20px] font-black tracking-tight text-slate-950">Select seats and date</h2>
-              </div>
-              <div className="rounded-2xl bg-sky-50 p-3 text-sky-700">
-                <Ticket size={18} />
-              </div>
-            </div>
-
-            <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-              <label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Travel date</label>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
               <input
-                type="date"
-                value={travelDate}
-                onChange={(event) => setTravelDate(event.target.value)}
-                className="mt-2 w-full bg-transparent text-sm font-black text-slate-900 outline-none"
+                value={formData.customerName}
+                onChange={(e) => setField('customerName', e.target.value)}
+                placeholder="Lead passenger name"
+                className="w-full rounded-2xl bg-slate-50 px-5 py-3.5 text-sm font-black text-slate-900 outline-none border border-transparent focus:border-violet-200 transition-all"
               />
             </div>
-
-            <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Seat count</p>
-                <p className="mt-1 text-[18px] font-black text-slate-950">{seatCount} passenger{seatCount === 1 ? '' : 's'}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleSeatAdjust('decrement')}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-xl font-black text-slate-700"
-                >
-                  -
-                </button>
-                <div className="min-w-[44px] text-center text-lg font-black text-slate-950">{seatCount}</div>
-                <button
-                  type="button"
-                  onClick={() => handleSeatAdjust('increment')}
-                  className="flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-xl font-black text-slate-700"
-                >
-                  +
-                </button>
-              </div>
-            </div>
-
-            <div className="mt-4 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
-              {route.availableSeats} seats are currently available on this helicopter route.
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-white/80 bg-white/95 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Passenger contact</p>
-                <h2 className="mt-1 text-[20px] font-black tracking-tight text-slate-950">Primary traveller details</h2>
-              </div>
-              <div className="rounded-2xl bg-violet-50 p-3 text-violet-700">
-                <UserRound size={18} />
-              </div>
-            </div>
-
-            <div className="mt-5 grid gap-4">
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Full name</label>
-                <input
-                  value={formData.customerName}
-                  onChange={(event) => setField('customerName', event.target.value)}
-                  className="mt-2 w-full bg-transparent text-sm font-black text-slate-900 outline-none"
-                  placeholder="Enter lead passenger name"
-                />
-              </div>
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Phone number</label>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone</label>
                 <input
                   value={formData.customerPhone}
-                  onChange={(event) => setField('customerPhone', event.target.value)}
-                  className="mt-2 w-full bg-transparent text-sm font-black text-slate-900 outline-none"
-                  placeholder="Enter mobile number"
+                  onChange={(e) => setField('customerPhone', e.target.value)}
+                  placeholder="9876543210"
+                  className="w-full rounded-2xl bg-slate-50 px-5 py-3.5 text-sm font-black text-slate-900 outline-none border border-transparent focus:border-violet-200 transition-all"
                 />
               </div>
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Email</label>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
                 <input
                   value={formData.customerEmail}
-                  onChange={(event) => setField('customerEmail', event.target.value)}
-                  className="mt-2 w-full bg-transparent text-sm font-black text-slate-900 outline-none"
-                  placeholder="For travel confirmation"
+                  onChange={(e) => setField('customerEmail', e.target.value)}
+                  placeholder="email@example.com"
+                  className="w-full rounded-2xl bg-slate-50 px-5 py-3.5 text-sm font-black text-slate-900 outline-none border border-transparent focus:border-violet-200 transition-all"
                 />
               </div>
             </div>
-          </div>
-
-          <div className="rounded-[30px] border border-white/80 bg-white/95 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Passenger roster</p>
-                <h2 className="mt-1 text-[20px] font-black tracking-tight text-slate-950">Add every flyer name</h2>
-              </div>
-              <div className="rounded-2xl bg-amber-50 p-3 text-amber-700">
-                <Users size={18} />
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              {passengerNames.map((passengerName, index) => (
-                <div key={`passenger-${index}`} className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                  <label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Passenger {index + 1}</label>
-                  <input
-                    value={passengerName}
-                    onChange={(event) => setPassengerName(index, event.target.value)}
-                    className="mt-2 w-full bg-transparent text-sm font-black text-slate-900 outline-none"
-                    placeholder={`Traveller ${index + 1} full name`}
-                  />
-                </div>
-              ))}
-
-              <div className="rounded-2xl border border-slate-100 bg-slate-50/70 p-4">
-                <label className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Special request</label>
-                <textarea
-                  value={formData.notes}
-                  onChange={(event) => setField('notes', event.target.value)}
-                  rows={3}
-                  className="mt-2 w-full resize-none bg-transparent text-sm font-bold text-slate-900 outline-none"
-                  placeholder="Temple priority, luggage note, senior citizen support, or meeting point details"
-                />
-              </div>
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-white/80 bg-white/95 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-slate-400">Payment mode</p>
-                <h2 className="mt-1 text-[20px] font-black tracking-tight text-slate-950">Choose how to confirm</h2>
-              </div>
-              <div className="rounded-2xl bg-rose-50 p-3 text-rose-700">
-                <CreditCard size={18} />
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3">
-              <div className="flex w-full items-center justify-between rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-left shadow-sm">
-                <div>
-                  <p className="text-sm font-black text-slate-950">{activePaymentGateway?.label || 'No payment gateway enabled'}</p>
-                  <p className="mt-1 text-xs font-semibold text-slate-500">
-                    {activePaymentGateway
-                      ? 'Secure online checkout for this helicopter booking'
-                      : 'Enable a payment gateway in Taxi Admin to accept online bookings here'}
-                  </p>
-                </div>
-                <div className="rounded-full bg-sky-600 p-1 text-white">
-                  <CheckCircle2 size={16} />
-                </div>
-              </div>
-            </div>
-
-            <div className={`mt-4 rounded-2xl px-4 py-3 text-sm font-bold ${activePaymentGateway ? 'border border-emerald-100 bg-emerald-50 text-emerald-800' : 'border border-amber-100 bg-amber-50 text-amber-800'}`}>
-              {activePaymentGateway
-                ? `Bookings on this route will use ${activePaymentGateway.label} because that is the gateway currently enabled in Taxi Admin.`
-                : 'No gateway is enabled in Taxi Admin right now, so payment cannot be completed from this screen.'}
-            </div>
-          </div>
-
-          <div className="rounded-[30px] border border-slate-950 bg-slate-950 p-5 text-white shadow-[0_24px_48px_rgba(15,23,42,0.28)]">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-white/45">Booking summary</p>
-                <h2 className="mt-1 text-[22px] font-black tracking-tight">Trip total</h2>
-              </div>
-              <div className="rounded-2xl bg-white/10 p-3">
-                <ShieldCheck size={18} />
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3 rounded-[24px] border border-white/10 bg-white/5 p-4">
-              <div className="flex items-center justify-between text-sm font-bold text-white/80">
-                <span className="inline-flex items-center gap-2"><CalendarDays size={14} /> Travel date</span>
-                <span>{formatTravelDate(travelDate)}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm font-bold text-white/80">
-                <span className="inline-flex items-center gap-2"><MapPin size={14} /> Route</span>
-                <span>{route.originAirport} to {route.destinationAirport}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm font-bold text-white/80">
-                <span className="inline-flex items-center gap-2"><Users size={14} /> Seats</span>
-                <span>{seatCount}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm font-bold text-white/80">
-                <span className="inline-flex items-center gap-2"><Phone size={14} /> Pilot contact</span>
-                <span>{route.airway?.pilotPhone || '--'}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm font-bold text-white/80">
-                <span>Seat fare</span>
-                <span>{formatCurrency(subtotalFare)}</span>
-              </div>
-              <div className="flex items-center justify-between text-sm font-bold text-white/80">
-                <span>Service tax ({serviceTaxPercent}%)</span>
-                <span>{formatCurrency(serviceTaxAmount)}</span>
-              </div>
-              <div className="h-px bg-white/10" />
-              <div className="flex items-center justify-between text-lg font-black text-white">
-                <span>Total payable</span>
-                <span>{formatCurrency(totalFare)}</span>
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white/75">
-              <AlertCircle size={18} className="mt-0.5 shrink-0" />
-              <p className="text-xs font-semibold">
-                Bookings created here also appear inside the taxi admin Airways bookings screen so operations can track seat reservations live.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSubmit}
-              disabled={submitting || !activePaymentGateway}
-              className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-white px-5 py-4 text-sm font-black text-slate-950 shadow-[0_16px_28px_rgba(255,255,255,0.14)] disabled:opacity-60"
-            >
-              <FileText size={16} />
-              {submitting
-                ? `Processing ${activePaymentGateway?.label || 'payment'}...`
-                : activePaymentGateway
-                  ? `Pay ${formatCurrency(totalFare)} with ${activePaymentGateway.label}`
-                  : 'Enable a payment gateway in admin'}
-            </button>
           </div>
         </section>
+
+        {/* Passenger Roster */}
+        <section className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm space-y-5">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+              <Users size={18} />
+            </div>
+            <h3 className="text-sm font-black text-slate-950 uppercase tracking-widest">Passenger Roster</h3>
+          </div>
+
+          <div className="space-y-3">
+            {passengerNames.map((name, idx) => (
+              <div key={idx} className="relative">
+                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">P{idx + 1}</span>
+                <input
+                  value={name}
+                  onChange={(e) => setPassengerName(idx, e.target.value)}
+                  placeholder={`Full Name of Passenger ${idx + 1}`}
+                  className="w-full rounded-2xl bg-slate-50 pl-12 pr-5 py-3.5 text-sm font-black text-slate-900 outline-none border border-transparent focus:border-emerald-200 transition-all"
+                />
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Fare Summary */}
+        <section className="rounded-[32px] bg-white p-8 border border-slate-100 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-black text-slate-950 uppercase tracking-widest">Fare Breakup</h3>
+            <div className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-widest">
+              Live Fare
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex justify-between text-sm font-bold text-slate-500">
+              <span>Seat Fare ({seatCount} x {formatCurrency(selectedAirway?.basePrice)})</span>
+              <span className="text-slate-900">{formatCurrency(subtotalFare)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-bold text-slate-500">
+              <span>Service Tax ({serviceTaxPercent}%)</span>
+              <span className="text-slate-900">{formatCurrency(serviceTaxAmount)}</span>
+            </div>
+            <div className="h-px bg-slate-50 pt-2" />
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-black text-slate-950">Grand Total</span>
+              <span className="text-2xl font-black text-sky-600">{formatCurrency(totalFare)}</span>
+            </div>
+          </div>
+
+          <div className="rounded-2xl bg-slate-50 p-4 flex items-start gap-3">
+            <ShieldCheck size={18} className="text-sky-600 mt-0.5" />
+            <div>
+              <p className="text-[11px] font-black text-slate-900">Secure Payment Guaranteed</p>
+              <p className="text-[10px] font-bold text-slate-400 mt-0.5">Your payment is processed through encrypted channels via {activePaymentGateway?.label || 'Online'}.</p>
+            </div>
+          </div>
+        </section>
+
+        {/* Payment Button */}
+        <div className="pt-2">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || !activePaymentGateway}
+            className="w-full group relative overflow-hidden rounded-[28px] bg-slate-950 py-5 text-white shadow-2xl active:scale-[0.98] transition-all disabled:opacity-50"
+          >
+            <div className="relative z-10 flex items-center justify-center gap-3">
+              {submitting ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+              ) : (
+                <CreditCard size={20} />
+              )}
+              <span className="text-sm font-black uppercase tracking-[0.2em]">
+                {submitting ? 'Processing Payment...' : `Pay ${formatCurrency(totalFare)} Now`}
+              </span>
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-sky-500/20 to-orange-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
+          
+          {!activePaymentGateway && (
+            <div className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-3">
+              <AlertCircle size={18} className="text-amber-600 shrink-0" />
+              <p className="text-[10px] font-bold text-amber-800">
+                Online payment is currently unavailable. Please enable a payment gateway in the admin panel to proceed.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

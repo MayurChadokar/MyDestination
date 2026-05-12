@@ -2,6 +2,12 @@ import mongoose from 'mongoose';
 
 const airwayRouteSchema = new mongoose.Schema(
   {
+    airwayIds: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'TaxiAirway',
+      default: [],
+      index: true,
+    },
     airwayId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'TaxiAirway',
@@ -75,6 +81,7 @@ const airwayRouteSchema = new mongoose.Schema(
 );
 
 airwayRouteSchema.index({ airwayId: 1, routeStatus: 1 });
+airwayRouteSchema.index({ airwayIds: 1, routeStatus: 1 });
 airwayRouteSchema.index({ originAirport: 1, destinationAirport: 1 });
 airwayRouteSchema.index({ routeName: 1, flightNumber: 1 });
 

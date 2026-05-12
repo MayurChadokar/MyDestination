@@ -140,6 +140,18 @@ const serializeAirway = (item = {}) => ({
 
 const serializeRoute = (route = {}, airway = null) => {
   const serializedAirway = airway ? serializeAirway(airway) : null;
+  const airwayIds = Array.isArray(route.airwayIds) && route.airwayIds.length > 0
+    ? route.airwayIds.map((entry) => String(entry?._id || entry || '')).filter(Boolean)
+    : serializedAirway?.id
+      ? [serializedAirway.id]
+      : [];
+  const airways = Array.isArray(route.airwayIds) && route.airwayIds.length > 0
+    ? route.airwayIds
+      .map((entry) => (entry && typeof entry === 'object' ? serializeAirway(entry) : null))
+      .filter(Boolean)
+    : serializedAirway
+      ? [serializedAirway]
+      : [];
   const baseFare = toNumber(serializedAirway?.basePrice, 0);
   const serviceTaxPercent = toNumber(serializedAirway?.serviceTaxPercent, 0);
   const serviceTaxAmount = (baseFare * serviceTaxPercent) / 100;
@@ -147,6 +159,7 @@ const serializeRoute = (route = {}, airway = null) => {
   return {
     id: String(route._id || route.id || ''),
     airwayId: String(route.airwayId?._id || route.airwayId || serializedAirway?.id || ''),
+    airwayIds,
     routeName: route.routeName || '',
     flightNumber: route.flightNumber || '',
     originAirport: route.originAirport || '',
@@ -160,6 +173,7 @@ const serializeRoute = (route = {}, airway = null) => {
     routeStatus: route.routeStatus || 'scheduled',
     notes: route.notes || '',
     airway: serializedAirway,
+    airways,
     availableSeats: getAvailableSeatCount(route),
     baseFare,
     serviceTaxPercent,
@@ -210,11 +224,24 @@ const resolveBookingDraft = async (payload = {}, userId = '') => {
     throw new ApiError(401, 'User authentication is required');
   }
 
-  const route = await AirwayRoute.findById(payload?.routeId).populate('airwayId');
+  const route = await AirwayRoute.findById(payload?.routeId).populate('airwayId').populate('airwayIds');
   if (!route || !route.airwayId) {
     throw new ApiError(404, 'Selected helicopter route is no longer available');
   }
-  if (toLower(route.airwayId.status) !== 'active' || toLower(route.routeStatus) !== 'scheduled') {
+  const routeAirways = Array.isArray(route.airwayIds) && route.airwayIds.length > 0
+    ? route.airwayIds
+    : route.airwayId
+      ? [route.airwayId]
+      : [];
+  const requestedAirwayId = toText(payload?.selectedAirwayId);
+  const selectedAirway = requestedAirwayId
+    ? routeAirways.find((item) => String(item?._id || item?.id || '') === requestedAirwayId)
+    : route.airwayId;
+
+  if (!selectedAirway) {
+    throw new ApiError(400, 'Selected airline is not available on this route');
+  }
+  if (toLower(selectedAirway.status) !== 'active' || toLower(route.routeStatus) !== 'scheduled') {
     throw new ApiError(400, 'Selected helicopter route is not available right now');
   }
 
@@ -237,16 +264,18 @@ const resolveBookingDraft = async (payload = {}, userId = '') => {
     throw new ApiError(400, 'Please enter every passenger name before booking');
   }
 
-  const basePrice = toNumber(route.airwayId.basePrice, 0);
+  const basePrice = toNumber(selectedAirway.basePrice, 0);
   const defaultSubtotalFare = basePrice * seatCount;
   const subtotalFare = Math.max(0, toNumber(payload?.subtotalFare, defaultSubtotalFare));
-  const serviceTaxPercent = Math.max(0, toNumber(payload?.serviceTaxPercent, route.airwayId.serviceTaxPercent || 0));
+  const serviceTaxPercent = Math.max(0, toNumber(payload?.serviceTaxPercent, selectedAirway.serviceTaxPercent || 0));
   const serviceTaxAmount = Math.max(0, toNumber(payload?.serviceTaxAmount, (subtotalFare * serviceTaxPercent) / 100));
   const totalFare = Math.max(0, toNumber(payload?.totalFare, subtotalFare + serviceTaxAmount));
 
   return {
     userId,
     route,
+    selectedAirway,
+    selectedAirwayId: String(selectedAirway._id || selectedAirway.id || ''),
     customerName,
     customerPhone,
     customerEmail: toText(payload?.customerEmail).toLowerCase(),
@@ -296,9 +325,9 @@ const finalizeBooking = async ({
   const booking = await AirwayBooking.create({
     bookingCode: buildBookingCode(),
     userId: draft.userId,
-    airwayId: draft.route.airwayId._id,
+    airwayId: draft.selectedAirway._id,
     routeId: draft.route._id,
-    airwayName: draft.route.airwayId.airlineName || '',
+    airwayName: draft.selectedAirway.airlineName || '',
     routeName: draft.route.routeName || '',
     flightNumber: draft.route.flightNumber || '',
     customerName: draft.customerName,
@@ -341,6 +370,7 @@ export const searchAirwayRoutes = asyncHandler(async (req, res) => {
     ...(destination ? { destinationAirport: { $regex: toText(destination), $options: 'i' } } : {}),
   })
     .populate('airwayId')
+    .populate('airwayIds')
     .sort({ createdAt: -1 })
     .lean();
 
@@ -381,7 +411,7 @@ export const searchAirwayRoutes = asyncHandler(async (req, res) => {
 });
 
 export const getAirwayRouteDetails = asyncHandler(async (req, res) => {
-  const route = await AirwayRoute.findById(req.params.id).populate('airwayId').lean();
+  const route = await AirwayRoute.findById(req.params.id).populate('airwayId').populate('airwayIds').lean();
   if (!route || !route.airwayId) {
     throw new ApiError(404, 'Airway route not found');
   }

@@ -81,6 +81,15 @@ const normalizeSeatInventory = (input = {}, fallbackSeatCapacity = 0) => {
 };
 
 const normalizeRoutePayload = (payload = {}, existing = null, airway = null) => ({
+  airwayIds: (() => {
+    const source = Array.isArray(payload.airwayIds)
+      ? payload.airwayIds
+      : Array.isArray(existing?.airwayIds) && existing.airwayIds.length > 0
+        ? existing.airwayIds
+        : [payload.airwayId || existing?.airwayId].filter(Boolean);
+
+    return [...new Set(source.map((item) => String(item || '').trim()).filter(Boolean))];
+  })(),
   airwayId: payload.airwayId || existing?.airwayId,
   routeName: toText(payload.routeName || existing?.routeName),
   flightNumber: toUpper(payload.flightNumber || existing?.flightNumber),
@@ -134,7 +143,15 @@ const serializeAirway = (item = {}) => ({
 
 const serializeRoute = (item = {}, airwayMap = new Map()) => {
   const airwayId = String(item.airwayId?._id || item.airwayId || '');
+  const airwayIds = Array.isArray(item.airwayIds) && item.airwayIds.length > 0
+    ? item.airwayIds.map((entry) => String(entry?._id || entry || '')).filter(Boolean)
+    : airwayId
+      ? [airwayId]
+      : [];
   const airway = airwayMap.get(airwayId) || item.airwayId || null;
+  const airways = airwayIds
+    .map((id) => airwayMap.get(id))
+    .filter(Boolean);
   const seatInventoryObject =
     item.seatInventory instanceof Map
       ? Object.fromEntries(item.seatInventory.entries())
@@ -145,6 +162,7 @@ const serializeRoute = (item = {}, airwayMap = new Map()) => {
   return {
     id: String(item._id || item.id || ''),
     airwayId,
+    airwayIds,
     routeName: item.routeName || '',
     flightNumber: item.flightNumber || '',
     originAirport: item.originAirport || '',
@@ -160,6 +178,7 @@ const serializeRoute = (item = {}, airwayMap = new Map()) => {
     routeStatus: item.routeStatus || 'scheduled',
     notes: item.notes || '',
     airway: airway?._id ? serializeAirway(airway) : airwayMap.get(airwayId) || null,
+    airways,
     createdAt: item.createdAt || null,
     updatedAt: item.updatedAt || null,
   };
@@ -228,8 +247,14 @@ export const deleteAirway = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Airway not found');
   }
 
-  const routeIds = await AirwayRoute.find({ airwayId: airway._id }).distinct('_id');
+  const routeIds = await AirwayRoute.find({
+    $or: [{ airwayId: airway._id }, { airwayIds: airway._id }],
+  }).distinct('_id');
   await AirwayRoute.deleteMany({ airwayId: airway._id });
+  await AirwayRoute.updateMany(
+    { airwayIds: airway._id },
+    { $pull: { airwayIds: airway._id } },
+  );
   await AirwayBooking.deleteMany({
     $or: [
       { airwayId: airway._id },
@@ -250,18 +275,29 @@ export const getAirwayRoutes = asyncHandler(async (_req, res) => {
 });
 
 export const createAirwayRoute = asyncHandler(async (req, res) => {
-  const airway = await Airway.findById(req.body.airwayId).lean();
-  if (!airway) {
-    throw new ApiError(400, 'Please select a valid airway');
+  const requestedAirwayIds = Array.isArray(req.body.airwayIds)
+    ? [...new Set(req.body.airwayIds.map((item) => String(item || '').trim()).filter(Boolean))]
+    : [String(req.body.airwayId || '').trim()].filter(Boolean);
+  if (requestedAirwayIds.length === 0) {
+    throw new ApiError(400, 'Please select at least one valid airway');
   }
+  const airways = await Airway.find({ _id: { $in: requestedAirwayIds } }).lean();
+  if (airways.length !== requestedAirwayIds.length) {
+    throw new ApiError(400, 'Please select valid airway entries');
+  }
+  const primaryAirway = airways.find((item) => String(item._id) === requestedAirwayIds[0]) || airways[0];
 
-  const normalized = normalizeRoutePayload(req.body, null, airway);
+  const normalized = normalizeRoutePayload(
+    { ...req.body, airwayId: String(primaryAirway._id), airwayIds: requestedAirwayIds },
+    null,
+    primaryAirway,
+  );
   if (!normalized.routeName || !normalized.flightNumber) {
     throw new ApiError(400, 'Route name and flight number are required');
   }
 
   const route = await AirwayRoute.create(normalized);
-  const airwayMap = new Map([[String(airway._id), serializeAirway(airway)]]);
+  const airwayMap = new Map(airways.map((item) => [String(item._id), serializeAirway(item)]));
   return created(res, serializeRoute(route.toObject(), airwayMap), 'Airway route created successfully');
 });
 
@@ -271,15 +307,27 @@ export const updateAirwayRoute = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Airway route not found');
   }
 
-  const airwayId = req.body.airwayId || existing.airwayId;
-  const airway = await Airway.findById(airwayId).lean();
-  if (!airway) {
-    throw new ApiError(400, 'Please select a valid airway');
+  const requestedAirwayIds = Array.isArray(req.body.airwayIds)
+    ? [...new Set(req.body.airwayIds.map((item) => String(item || '').trim()).filter(Boolean))]
+    : Array.isArray(existing.airwayIds) && existing.airwayIds.length > 0
+      ? existing.airwayIds.map((item) => String(item || '').trim()).filter(Boolean)
+      : [String(req.body.airwayId || existing.airwayId || '').trim()].filter(Boolean);
+  if (requestedAirwayIds.length === 0) {
+    throw new ApiError(400, 'Please select at least one valid airway');
   }
+  const airways = await Airway.find({ _id: { $in: requestedAirwayIds } }).lean();
+  if (airways.length !== requestedAirwayIds.length) {
+    throw new ApiError(400, 'Please select valid airway entries');
+  }
+  const primaryAirway = airways.find((item) => String(item._id) === requestedAirwayIds[0]) || airways[0];
 
-  const normalized = normalizeRoutePayload(req.body, existing, airway);
+  const normalized = normalizeRoutePayload(
+    { ...req.body, airwayId: String(primaryAirway._id), airwayIds: requestedAirwayIds },
+    existing,
+    primaryAirway,
+  );
   const route = await AirwayRoute.findByIdAndUpdate(req.params.id, normalized, { new: true, lean: true });
-  const airwayMap = new Map([[String(airway._id), serializeAirway(airway)]]);
+  const airwayMap = new Map(airways.map((item) => [String(item._id), serializeAirway(item)]));
   return ok(res, serializeRoute(route, airwayMap), 'Airway route updated successfully');
 });
 

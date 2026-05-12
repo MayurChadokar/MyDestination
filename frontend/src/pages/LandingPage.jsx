@@ -54,7 +54,7 @@ const LandingPage = () => {
           {/* Desktop Menu */}
           <div className="hidden lg:flex gap-10 text-white/90 text-sm font-bold tracking-wide">
             <a href="#" className="text-emerald-400 transition">Home</a>
-            <Link to="/welcome?type=tour" className="hover:text-emerald-400 transition">Tours</Link>
+            <Link to="/taxi/user" className="hover:text-emerald-400 transition">Tours</Link>
             <Link to="/welcome?type=tour" className="hover:text-emerald-400 transition">Destination</Link>
             <Link to="/welcome?type=hotel" className="hover:text-emerald-400 transition">Hotel</Link>
             <a href="#about" className="hover:text-emerald-400 transition">About us</a>
@@ -80,7 +80,7 @@ const LandingPage = () => {
           <div className="absolute top-[80px] left-0 w-full bg-black/40 backdrop-blur-2xl z-40 lg:hidden border-b border-white/20 shadow-2xl">
             <div className="flex flex-col px-8 py-6 gap-6 text-white/90 text-base font-bold tracking-wide">
               <a href="#" onClick={() => setIsMobileMenuOpen(false)} className="text-emerald-400 transition border-b border-white/10 pb-2">Home</a>
-              <Link to="/welcome?type=tour" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-emerald-400 transition border-b border-white/10 pb-2">Tours</Link>
+              <Link to="/taxi/user" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-emerald-400 transition border-b border-white/10 pb-2">Tours</Link>
               <Link to="/welcome?type=tour" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-emerald-400 transition border-b border-white/10 pb-2">Destination</Link>
               <Link to="/welcome?type=hotel" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-emerald-400 transition border-b border-white/10 pb-2">Hotel</Link>
               <a href="#about" onClick={() => setIsMobileMenuOpen(false)} className="hover:text-emerald-400 transition border-b border-white/10 pb-2">About us</a>

@@ -87,6 +87,25 @@ const AirwaysRouteManager = ({ mode: modeProp = null }) => {
     setFormData((current) => ({ ...current, [key]: value }));
   };
 
+  const toggleAirway = (airwayId) => {
+    setFormData((current) => {
+      const currentIds = Array.isArray(current.airwayIds) && current.airwayIds.length > 0
+        ? current.airwayIds
+        : current.airwayId
+          ? [current.airwayId]
+          : [];
+      const nextIds = currentIds.includes(airwayId)
+        ? currentIds.filter((item) => item !== airwayId)
+        : [...currentIds, airwayId];
+
+      return {
+        ...current,
+        airwayIds: nextIds,
+        airwayId: nextIds[0] || '',
+      };
+    });
+  };
+
   const toggleDay = (day) => {
     setFormData((current) => ({
       ...current,
@@ -96,24 +115,38 @@ const AirwaysRouteManager = ({ mode: modeProp = null }) => {
     }));
   };
 
-  const selectedAirway = airwayMap.get(formData.airwayId);
+  const selectedAirwayIds = useMemo(
+    () => (Array.isArray(formData.airwayIds) && formData.airwayIds.length > 0
+      ? formData.airwayIds
+      : formData.airwayId
+        ? [formData.airwayId]
+        : []),
+    [formData.airwayId, formData.airwayIds],
+  );
+
+  const selectedAirways = useMemo(
+    () => selectedAirwayIds.map((item) => airwayMap.get(item)).filter(Boolean),
+    [airwayMap, selectedAirwayIds],
+  );
+
+  const selectedAirway = selectedAirways[0] || null;
 
   useEffect(() => {
-    if (!selectedAirway) return;
+    if (selectedAirways.length === 0) return;
 
     setFormData((current) => ({
       ...current,
-      seatInventory: (selectedAirway.seatClasses || []).reduce((acc, seatClass) => {
+      seatInventory: selectedAirways.flatMap((airway) => airway.seatClasses || []).reduce((acc, seatClass) => {
         acc[seatClass.cabin] = Number(current.seatInventory?.[seatClass.cabin] ?? seatClass.seatCount ?? 0);
         return acc;
       }, {}),
     }));
-  }, [selectedAirway?.id]);
+  }, [selectedAirwayIds.join('|')]);
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!formData.airwayId || !formData.routeName.trim() || !formData.flightNumber.trim()) {
-      toast.error('Airway, route name, and flight number are required.');
+    if (selectedAirwayIds.length === 0 || !formData.routeName.trim() || !formData.flightNumber.trim()) {
+      toast.error('At least one airway, route name, and flight number are required.');
       return;
     }
 
@@ -121,6 +154,8 @@ const AirwaysRouteManager = ({ mode: modeProp = null }) => {
       setSubmitting(true);
       await upsertAdminAirwayRoute({
         ...formData,
+        airwayIds: selectedAirwayIds,
+        airwayId: selectedAirwayIds[0] || '',
         distanceKm: Number(formData.distanceKm || 0),
         durationMinutes: Number(formData.durationMinutes || 0),
       });
@@ -193,12 +228,20 @@ const AirwaysRouteManager = ({ mode: modeProp = null }) => {
                 <div className="text-sm font-semibold text-slate-500">No airway routes found.</div>
               ) : (
                 filteredRoutes.map((item) => {
-                  const airway = airwayMap.get(item.airwayId);
+                  const routeAirways = (Array.isArray(item.airwayIds) && item.airwayIds.length > 0
+                    ? item.airwayIds
+                    : item.airwayId
+                      ? [item.airwayId]
+                      : [])
+                    .map((entry) => airwayMap.get(entry))
+                    .filter(Boolean);
                   return (
                     <div key={item.id} className="rounded-[28px] border border-slate-200 bg-slate-50/70 p-6 shadow-sm">
                       <div className="flex items-start justify-between gap-4">
                         <div>
-                          <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">{airway?.airlineName || 'Airway'}</p>
+                          <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                            {routeAirways.length > 0 ? routeAirways.map((entry) => entry.airlineName).join(', ') : 'Airway'}
+                          </p>
                           <h3 className="mt-1 text-lg font-black text-slate-900">{item.routeName}</h3>
                           <p className="mt-1 text-sm font-semibold text-slate-500">{item.flightNumber} | {item.originAirport} to {item.destinationAirport}</p>
                         </div>
@@ -286,13 +329,28 @@ const AirwaysRouteManager = ({ mode: modeProp = null }) => {
 
           <div className="mt-8 grid gap-5 md:grid-cols-2">
             <div>
-              <label className={labelClass}>Airway</label>
-              <select className={inputClass} value={formData.airwayId} onChange={(event) => setField('airwayId', event.target.value)}>
-                <option value="">Select airway</option>
-                {airways.map((item) => (
-                  <option key={item.id} value={item.id}>{item.airlineName} ({item.airlineCode})</option>
-                ))}
-              </select>
+              <label className={labelClass}>Airways</label>
+              <div className="rounded-[24px] border border-slate-200 bg-slate-50/70 p-4">
+                <div className="flex flex-wrap gap-2">
+                  {airways.map((item) => {
+                    const active = selectedAirwayIds.includes(item.id);
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => toggleAirway(item.id)}
+                        className={`rounded-full px-4 py-2 text-[11px] font-black uppercase tracking-wider transition ${
+                          active
+                            ? 'bg-slate-900 text-white'
+                            : 'border border-slate-200 bg-white text-slate-500 hover:border-slate-300'
+                        }`}
+                      >
+                        {item.airlineName} ({item.airlineCode})
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
             <div>
               <label className={labelClass}>Flight Number</label>
@@ -365,7 +423,10 @@ const AirwaysRouteManager = ({ mode: modeProp = null }) => {
               </p>
 
               <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {selectedAirway.seatClasses.map((seatClass) => (
+                {selectedAirways
+                  .flatMap((airway) => airway.seatClasses || [])
+                  .filter((seatClass, index, array) => array.findIndex((entry) => entry.cabin === seatClass.cabin) === index)
+                  .map((seatClass) => (
                   <div key={seatClass.id}>
                     <label className={labelClass}>{seatClass.cabin}</label>
                     <input

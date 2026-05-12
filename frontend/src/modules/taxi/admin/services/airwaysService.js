@@ -48,6 +48,7 @@ export const createAirwayDraft = () => ({
 export const createAirwayRouteDraft = () => ({
   id: '',
   airwayId: '',
+  airwayIds: [],
   routeName: '',
   flightNumber: '',
   originAirport: '',

@@ -18,12 +18,11 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { userService } from '../../services/userService';
+import BottomNavbar from '../../components/BottomNavbar';
 
 // Asset Imports
-// import heliHeaderImg from '@/assets/airways/heli_header.png';
-// import kedarnathImg from '@/assets/airways/kedarnath.png';
-const heliHeaderImg = 'https://images.unsplash.com/photo-1540962351504-03099e0a754b?auto=format&fit=crop&q=80&w=1000';
-const kedarnathImg = 'https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&q=80&w=1000';
+import heliHeaderImg from '@/assets/airways/heli_header.png';
+import kedarnathImg from '@/assets/airways/kedarnath.png';
 
 const CheckCircleIcon = ({ size = 16, className = '' }) => (
   <svg
@@ -150,6 +149,35 @@ const AirwaysHome = () => {
       rating: '4.7',
     },
   ], []);
+  
+  const [activeInput, setActiveInput] = useState(null); // 'origin' or 'destination'
+
+  const SuggestionsDropdown = ({ items, onSelect, visible }) => {
+    if (!visible || items.length === 0) return null;
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="absolute left-0 right-0 top-[calc(100%+8px)] z-[100] overflow-hidden rounded-2xl border border-slate-100 bg-white/95 shadow-2xl backdrop-blur-xl"
+      >
+        <div className="max-h-60 overflow-y-auto no-scrollbar py-2">
+          {items.map((item) => (
+            <button
+              key={item}
+              type="button"
+              onMouseDown={() => onSelect(item)}
+              className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 active:bg-slate-100 transition-colors border-b border-slate-50 last:border-0"
+            >
+              <div className="h-8 w-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                <MapPin size={14} />
+              </div>
+              <span className="text-sm font-black text-slate-900">{item}</span>
+            </button>
+          ))}
+        </div>
+      </motion.div>
+    );
+  };
 
   const originSuggestions = useMemo(() => {
     const query = searchForm.origin.trim().toLowerCase();
@@ -278,29 +306,49 @@ const AirwaysHome = () => {
           >
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 relative">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">From</label>
                   <div className="relative">
                     <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-sky-500" />
                     <input
                       value={searchForm.origin}
                       onChange={(event) => handleChange('origin', event.target.value.toUpperCase())}
+                      onFocus={() => setActiveInput('origin')}
+                      onBlur={() => setTimeout(() => setActiveInput(null), 200)}
                       placeholder="Origin"
                       className="w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3.5 text-sm font-black text-slate-900 outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-sky-100"
                     />
                   </div>
+                  <SuggestionsDropdown
+                    items={originSuggestions}
+                    visible={activeInput === 'origin'}
+                    onSelect={(val) => {
+                      handleChange('origin', val);
+                      setActiveInput(null);
+                    }}
+                  />
                 </div>
-                <div className="space-y-1.5">
+                <div className="space-y-1.5 relative">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">To</label>
                   <div className="relative">
                     <MapPin size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-orange-500" />
                     <input
                       value={searchForm.destination}
                       onChange={(event) => handleChange('destination', event.target.value.toUpperCase())}
+                      onFocus={() => setActiveInput('destination')}
+                      onBlur={() => setTimeout(() => setActiveInput(null), 200)}
                       placeholder="Destination"
                       className="w-full rounded-2xl bg-slate-50 pl-11 pr-4 py-3.5 text-sm font-black text-slate-900 outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-orange-100"
                     />
                   </div>
+                  <SuggestionsDropdown
+                    items={destinationSuggestions}
+                    visible={activeInput === 'destination'}
+                    onSelect={(val) => {
+                      handleChange('destination', val);
+                      setActiveInput(null);
+                    }}
+                  />
                 </div>
               </div>
 
@@ -566,6 +614,7 @@ const AirwaysHome = () => {
           )}
         </AnimatePresence>
       </div>
+      <BottomNavbar />
     </div>
   );
 };

@@ -40,6 +40,8 @@ export const createAirwayDraft = () => ({
   serviceTaxPercent: 5,
   status: 'active',
   notes: '',
+  image: '',
+  gallery: [],
   seatClasses: buildHelicopterSeatClasses({ seatCapacity: 6, basePrice: 8500 }),
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
@@ -63,6 +65,8 @@ export const createAirwayRouteDraft = () => ({
   },
   routeStatus: 'scheduled',
   notes: '',
+  image: '',
+  gallery: [],
   createdAt: new Date().toISOString(),
   updatedAt: new Date().toISOString(),
 });

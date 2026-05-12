@@ -100,6 +100,14 @@ const airwaySchema = new mongoose.Schema(
       type: [airwaySeatClassSchema],
       default: [],
     },
+    image: {
+      type: String,
+      default: '',
+    },
+    gallery: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true },
 );

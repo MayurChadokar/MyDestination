@@ -136,6 +136,8 @@ const serializeAirway = (item = {}) => ({
   serviceTaxPercent: toNumber(item.serviceTaxPercent, 0),
   status: item.status || 'active',
   notes: item.notes || '',
+  image: item.image || '',
+  gallery: Array.isArray(item.gallery) ? item.gallery : [],
 });
 
 const serializeRoute = (route = {}, airway = null) => {
@@ -172,6 +174,8 @@ const serializeRoute = (route = {}, airway = null) => {
     seatInventory: getSeatInventoryObject(route.seatInventory),
     routeStatus: route.routeStatus || 'scheduled',
     notes: route.notes || '',
+    image: route.image || '',
+    gallery: Array.isArray(route.gallery) ? route.gallery : [],
     airway: serializedAirway,
     airways,
     availableSeats: getAvailableSeatCount(route),

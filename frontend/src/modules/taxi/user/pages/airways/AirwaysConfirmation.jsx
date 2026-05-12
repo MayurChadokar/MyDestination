@@ -16,6 +16,9 @@ import {
   ChevronRight,
   ShieldCheck,
   Clock3,
+  Info,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { userService } from '../../services/userService';
@@ -83,11 +86,11 @@ const AirwaysConfirmation = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] px-5 py-6">
-        <div className="mx-auto max-w-lg space-y-4">
-          <div className="h-12 animate-pulse rounded-2xl bg-slate-200" />
-          <div className="h-[520px] animate-pulse rounded-[40px] bg-white shadow-sm" />
-        </div>
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+         <div className="text-center">
+            <div className="h-16 w-16 border-4 border-slate-100 border-t-sky-500 rounded-full animate-spin mx-auto mb-4" />
+            <p className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Generating Ticket...</p>
+         </div>
       </div>
     );
   }
@@ -95,194 +98,214 @@ const AirwaysConfirmation = () => {
   if (!booking) return null;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans no-scrollbar">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-5 py-4">
+    <div className="min-h-screen bg-[#F8FAFC] pb-32 overflow-x-hidden overflow-y-auto" style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+      {/* Premium Sticky Header */}
+      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-100 px-5 py-4">
         <div className="flex items-center justify-between">
           <button
             type="button"
             onClick={() => navigate('/taxi/user/airways')}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-700 active:scale-95 transition-transform"
+            className="flex h-11 w-11 items-center justify-center rounded-[18px] bg-slate-50 text-slate-700 active:scale-95 transition-all"
           >
             <ArrowLeft size={18} />
           </button>
-          <h1 className="text-sm font-black text-slate-950 uppercase tracking-widest">E-Ticket</h1>
-          <button className="h-10 w-10 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-600">
+          <div className="text-center">
+             <h1 className="text-[11px] font-black text-slate-950 uppercase tracking-[0.25em]">Flight Pass</h1>
+             <p className="text-[9px] font-bold text-sky-600 mt-0.5 uppercase tracking-widest">Confirmed</p>
+          </div>
+          <button className="h-11 w-11 rounded-[18px] bg-slate-50 flex items-center justify-center text-slate-600">
             <Share2 size={18} />
           </button>
         </div>
       </div>
 
       <div className="mx-auto max-w-lg px-5 py-8">
-        {/* Success Animation Container */}
+        {/* Success Header */}
         <motion.div
-          initial={{ scale: 0.8, opacity: 0 }}
+          initial={{ scale: 0.9, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="flex flex-col items-center text-center mb-8"
+          className="flex flex-col items-center text-center mb-10"
         >
-          <div className="h-20 w-20 rounded-[32px] bg-emerald-500 text-white flex items-center justify-center shadow-2xl shadow-emerald-500/30">
-            <CheckCircle2 size={40} />
+          <div className="relative">
+             <div className="h-24 w-24 rounded-[40px] bg-slate-950 flex items-center justify-center text-white shadow-2xl shadow-slate-950/20">
+                <CheckCircle2 size={44} className="text-emerald-400" />
+             </div>
+             <div className="absolute -top-2 -right-2 h-8 w-8 rounded-full bg-sky-500 flex items-center justify-center text-white border-4 border-[#F8FAFC]">
+                <Sparkles size={14} />
+             </div>
           </div>
-          <h2 className="mt-6 text-2xl font-black text-slate-950">Booking Confirmed!</h2>
-          <p className="mt-2 text-sm font-bold text-slate-400">Your seat is secured. Have a great flight!</p>
+          <h2 className="mt-8 text-3xl font-['Outfit'] font-black text-slate-950 leading-tight">Sky's the Limit!</h2>
+          <p className="mt-2 text-sm font-bold text-slate-400">Your helicopter booking is confirmed.</p>
         </motion.div>
 
-        {/* Boarding Pass Style Card */}
+        {/* Premium Boarding Pass */}
         <motion.div
-          initial={{ y: 30, opacity: 0 }}
+          initial={{ y: 40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="relative"
+          className="relative filter drop-shadow-[0_32px_64px_rgba(15,23,42,0.12)]"
         >
-          {/* Top Part */}
-          <div className="bg-white rounded-t-[40px] p-8 border-x border-t border-slate-100 shadow-[0_-20px_40px_rgba(15,23,42,0.02)]">
-            <div className="flex items-center justify-between pb-6 border-b border-dashed border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-2xl bg-sky-50 flex items-center justify-center text-sky-600">
-                  <PlaneTakeoff size={20} />
+          {/* Main Ticket Body */}
+          <div className="bg-white rounded-[48px] overflow-hidden">
+             {/* Header Section */}
+             <div className="p-8 pb-10 border-b border-dashed border-slate-100 relative">
+                <div className="flex items-center justify-between mb-8">
+                   <div className="flex items-center gap-3">
+                      <div className="h-12 w-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center border border-sky-100 shadow-sm">
+                         <PlaneTakeoff size={24} />
+                      </div>
+                      <div>
+                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Operator</p>
+                         <p className="text-[13px] font-black text-slate-950 mt-0.5">{booking.airwayName}</p>
+                      </div>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Flight</p>
+                      <p className="text-[13px] font-black text-sky-600 mt-0.5">{booking.flightNumber}</p>
+                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Airline</p>
-                  <p className="text-sm font-black text-slate-950">{booking.airwayName}</p>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Class</p>
-                <p className="text-sm font-black text-emerald-600">Premium</p>
-              </div>
-            </div>
 
-            <div className="mt-8 flex items-center justify-between">
-              <div>
-                <p className="text-4xl font-black text-slate-950">{booking.originAirport}</p>
-                <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{booking.routeName.split(' to ')[0] || 'Origin'}</p>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="flex items-center gap-2 w-24">
-                  <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
-                  <div className="h-px flex-1 bg-slate-100" />
-                  <PlaneTakeoff size={18} className="text-sky-500" />
-                  <div className="h-px flex-1 bg-slate-100" />
-                  <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+                <div className="flex items-center justify-between gap-4">
+                   <div className="space-y-1">
+                      <p className="text-4xl font-['Outfit'] font-black text-slate-950 leading-none">{booking.originAirport}</p>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">{booking.routeName.split(' to ')[0]}</p>
+                   </div>
+                   <div className="flex flex-col items-center gap-2 flex-1 max-w-[120px]">
+                      <div className="flex items-center gap-2 w-full">
+                         <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+                         <div className="h-px flex-1 bg-slate-100" />
+                         <Zap size={14} className="text-sky-500" />
+                         <div className="h-px flex-1 bg-slate-100" />
+                         <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+                      </div>
+                      <span className="text-[9px] font-black text-slate-300 uppercase tracking-[0.2em]">Non-Stop</span>
+                   </div>
+                   <div className="text-right space-y-1">
+                      <p className="text-4xl font-['Outfit'] font-black text-slate-950 leading-none">{booking.destinationAirport}</p>
+                      <p className="text-[11px] font-bold text-slate-400 uppercase tracking-[0.1em]">{booking.routeName.split(' to ')[1]}</p>
+                   </div>
                 </div>
-                <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest">{booking.flightNumber}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-4xl font-black text-slate-950">{booking.destinationAirport}</p>
-                <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-widest">{booking.routeName.split(' to ')[1] || 'Dest'}</p>
-              </div>
-            </div>
 
-            <div className="mt-8 grid grid-cols-2 gap-y-6">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Date</p>
-                <p className="text-sm font-black text-slate-950 mt-1">{formatTravelDate(booking.travelDate)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Departure</p>
-                <p className="text-sm font-black text-slate-950 mt-1">{formatTimeLabel(booking.departureTime)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Passenger</p>
-                <p className="text-sm font-black text-slate-950 mt-1 line-clamp-1">{booking.customerName}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Seats</p>
-                <p className="text-sm font-black text-slate-950 mt-1">{booking.seatCount} Seat(s)</p>
-              </div>
-            </div>
-          </div>
+                {/* Notches */}
+                <div className="absolute -bottom-6 -left-6 h-12 w-12 rounded-full bg-[#F8FAFC]" />
+                <div className="absolute -bottom-6 -right-6 h-12 w-12 rounded-full bg-[#F8FAFC]" />
+             </div>
 
-          {/* Perforated Edge */}
-          <div className="relative h-12 bg-white border-x border-slate-100 flex items-center overflow-hidden">
-            <div className="absolute left-0 -translate-x-1/2 h-8 w-8 rounded-full bg-[#F8FAFC] border border-slate-100 shadow-inner" />
-            <div className="flex-1 border-t-2 border-dashed border-slate-100 mx-6" />
-            <div className="absolute right-0 translate-x-1/2 h-8 w-8 rounded-full bg-[#F8FAFC] border border-slate-100 shadow-inner" />
-          </div>
+             {/* Details Section */}
+             <div className="p-8 pt-10 space-y-8">
+                <div className="grid grid-cols-2 gap-y-8">
+                   <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Departure</p>
+                      <div className="flex items-center gap-2 mt-1">
+                         <CalendarDays size={14} className="text-slate-300" />
+                         <p className="text-sm font-black text-slate-950">{formatTravelDate(booking.travelDate)}</p>
+                      </div>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Time</p>
+                      <div className="flex items-center justify-end gap-2 mt-1">
+                         <Clock3 size={14} className="text-slate-300" />
+                         <p className="text-sm font-black text-slate-950">{formatTimeLabel(booking.departureTime)}</p>
+                      </div>
+                   </div>
+                   <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Passenger</p>
+                      <div className="flex items-center gap-2 mt-1">
+                         <UserRound size={14} className="text-slate-300" />
+                         <p className="text-sm font-black text-slate-950 truncate max-w-[120px]">{booking.customerName}</p>
+                      </div>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Seats</p>
+                      <div className="flex items-center justify-end gap-2 mt-1">
+                         <Users size={14} className="text-slate-300" />
+                         <p className="text-sm font-black text-slate-950">{booking.seatCount} Seat(s)</p>
+                      </div>
+                   </div>
+                </div>
 
-          {/* Bottom Part */}
-          <div className="bg-white rounded-b-[40px] p-8 border-x border-b border-slate-100 shadow-[0_20px_40px_rgba(15,23,42,0.06)]">
-            <div className="flex items-center justify-between">
-              <div className="space-y-4">
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Booking ID</p>
-                  <p className="text-base font-black text-slate-950 mt-1">#{booking.bookingCode}</p>
+                <div className="p-6 rounded-[32px] bg-slate-50 flex items-center justify-between border border-slate-100">
+                   <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Booking Code</p>
+                      <p className="text-base font-black text-slate-950 mt-1">#{booking.bookingCode}</p>
+                   </div>
+                   <div className="h-16 w-16 bg-white rounded-2xl border border-slate-200 flex items-center justify-center p-2">
+                      <Ticket size={32} className="text-slate-100" />
+                   </div>
                 </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Paid</p>
-                  <p className="text-2xl font-black text-sky-600 mt-1">{formatCurrency(booking.totalFare)}</p>
+
+                <div className="flex items-center justify-between">
+                   <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Fare</p>
+                      <p className="text-3xl font-['Outfit'] font-black text-sky-600 mt-1">{formatCurrency(booking.totalFare)}</p>
+                   </div>
+                   <div className="text-right">
+                      <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-1">Payment Status</p>
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-black uppercase tracking-widest">
+                         <ShieldCheck size={12} />
+                         Paid
+                      </div>
+                   </div>
                 </div>
-              </div>
-              <div className="h-24 w-24 bg-slate-50 rounded-2xl flex items-center justify-center p-2">
-                {/* Visual QR Code Placeholder */}
-                <div className="w-full h-full border-2 border-slate-200 border-dashed rounded-lg flex items-center justify-center">
-                    <Ticket size={32} className="text-slate-200" />
-                </div>
-              </div>
-            </div>
+             </div>
           </div>
         </motion.div>
 
         {/* Action Buttons */}
-        <div className="mt-8 space-y-4">
-          <button className="w-full flex items-center justify-center gap-3 rounded-[28px] bg-slate-950 py-5 text-white font-black text-sm uppercase tracking-[0.2em] shadow-xl active:scale-[0.98] transition-transform">
-            <Download size={20} />
-            Download Ticket
-          </button>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <button
+        <div className="mt-12 space-y-4">
+           <button className="w-full h-16 rounded-[28px] bg-slate-950 text-white font-black text-sm uppercase tracking-widest shadow-2xl shadow-slate-950/20 active:scale-95 transition-all flex items-center justify-center gap-3">
+              <Download size={20} />
+              Download Ticket
+           </button>
+           <div className="grid grid-cols-2 gap-4">
+              <button 
                 onClick={() => navigate('/taxi/user/airways')}
-                className="flex items-center justify-center gap-2 rounded-[24px] bg-white border border-slate-100 py-4 text-slate-600 font-black text-[11px] uppercase tracking-widest active:scale-[0.98] transition-transform shadow-sm"
-            >
-                New Booking
-            </button>
-            <button
+                className="h-14 rounded-[24px] bg-white border border-slate-100 text-slate-900 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
+              >
+                 Book Another
+              </button>
+              <button 
                 onClick={() => navigate('/taxi/user')}
-                className="flex items-center justify-center gap-2 rounded-[24px] bg-white border border-slate-100 py-4 text-slate-600 font-black text-[11px] uppercase tracking-widest active:scale-[0.98] transition-transform shadow-sm"
-            >
-                Back to Home
-            </button>
-          </div>
+                className="h-14 rounded-[24px] bg-white border border-slate-100 text-slate-900 font-black text-[11px] uppercase tracking-widest active:scale-95 transition-all"
+              >
+                 Dashboard
+              </button>
+           </div>
         </div>
 
-        {/* Info Section */}
-        <section className="mt-10 space-y-6">
-          <div className="flex items-center gap-3">
-             <div className="h-10 w-10 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-600">
-                <InfoIcon size={20} />
-             </div>
-             <h3 className="text-sm font-black text-slate-950 uppercase tracking-widest">Important Information</h3>
-          </div>
+        {/* Important Info */}
+        <section className="mt-12 space-y-6">
+           <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-2xl bg-orange-50 text-orange-600 flex items-center justify-center">
+                 <Info size={18} />
+              </div>
+              <h3 className="text-sm font-black text-slate-950 uppercase tracking-widest">Travel Advisory</h3>
+           </div>
 
-          <div className="space-y-4">
-            <div className="flex items-start gap-4 p-5 rounded-[28px] bg-white border border-slate-50 shadow-sm">
-                <Clock3 size={18} className="text-sky-500 mt-0.5 shrink-0" />
-                <div>
-                    <p className="text-sm font-black text-slate-900">Reporting Time</p>
-                    <p className="text-[11px] font-bold text-slate-400 mt-1 leading-relaxed">Please reach the helipad at least 45 minutes before departure for security check and weight measurement.</p>
-                </div>
-            </div>
-            <div className="flex items-start gap-4 p-5 rounded-[28px] bg-white border border-slate-50 shadow-sm">
-                <ShieldCheck size={18} className="text-emerald-500 mt-0.5 shrink-0" />
-                <div>
-                    <p className="text-sm font-black text-slate-900">ID Requirement</p>
-                    <p className="text-[11px] font-bold text-slate-400 mt-1 leading-relaxed">Carry a valid Government-issued photo ID (Aadhar, PAN, or Passport) for all passengers listed on this ticket.</p>
-                </div>
-            </div>
-          </div>
+           <div className="space-y-4">
+              <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-sm flex items-start gap-4">
+                 <div className="h-8 w-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center shrink-0">
+                    <Clock3 size={16} />
+                 </div>
+                 <div>
+                    <p className="text-sm font-black text-slate-950">Reporting Time</p>
+                    <p className="text-[11px] font-bold text-slate-400 mt-1 leading-relaxed">Reach the helipad 45 minutes prior. Late arrivals may result in seat forfeiture.</p>
+                 </div>
+              </div>
+              <div className="p-6 rounded-[32px] bg-white border border-slate-100 shadow-sm flex items-start gap-4">
+                 <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                    <ShieldCheck size={16} />
+                 </div>
+                 <div>
+                    <p className="text-sm font-black text-slate-950">Mandatory ID</p>
+                    <p className="text-[11px] font-bold text-slate-400 mt-1 leading-relaxed">Original Government ID is required for verification at the helipad security gate.</p>
+                 </div>
+              </div>
+           </div>
         </section>
       </div>
     </div>
   );
 };
-
-const InfoIcon = ({ size = 20 }) => (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="10" />
-        <line x1="12" y1="16" x2="12" y2="12" />
-        <line x1="12" y1="8" x2="12.01" y2="8" />
-    </svg>
-);
 
 export default AirwaysConfirmation;

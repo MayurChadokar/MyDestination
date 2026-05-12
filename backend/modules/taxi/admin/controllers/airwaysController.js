@@ -67,6 +67,8 @@ const normalizeAirwayPayload = (payload = {}, existing = null) => {
       : 'active',
     notes: toText(payload.notes || existing?.notes),
     seatClasses: buildSeatClasses({ ...payload, seatCapacity, basePrice }, existing),
+    image: toText(payload.image || existing?.image),
+    gallery: Array.isArray(payload.gallery) ? payload.gallery.map(item => toText(item)).filter(Boolean) : (Array.isArray(existing?.gallery) ? existing.gallery : []),
   };
 };
 
@@ -112,6 +114,8 @@ const normalizeRoutePayload = (payload = {}, existing = null, airway = null) => 
     ? toText(payload.routeStatus || existing?.routeStatus).toLowerCase()
     : 'scheduled',
   notes: toText(payload.notes || existing?.notes),
+  image: toText(payload.image || existing?.image),
+  gallery: Array.isArray(payload.gallery) ? payload.gallery.map(item => toText(item)).filter(Boolean) : (Array.isArray(existing?.gallery) ? existing.gallery : []),
 });
 
 const serializeAirway = (item = {}) => ({
@@ -139,6 +143,8 @@ const serializeAirway = (item = {}) => ({
     : [],
   createdAt: item.createdAt || null,
   updatedAt: item.updatedAt || null,
+  image: item.image || '',
+  gallery: Array.isArray(item.gallery) ? item.gallery : [],
 });
 
 const serializeRoute = (item = {}, airwayMap = new Map()) => {
@@ -177,6 +183,8 @@ const serializeRoute = (item = {}, airwayMap = new Map()) => {
     ),
     routeStatus: item.routeStatus || 'scheduled',
     notes: item.notes || '',
+    image: item.image || '',
+    gallery: Array.isArray(item.gallery) ? item.gallery : [],
     airway: airway?._id ? serializeAirway(airway) : airwayMap.get(airwayId) || null,
     airways,
     createdAt: item.createdAt || null,

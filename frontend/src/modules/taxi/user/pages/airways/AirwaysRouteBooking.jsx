@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   AlertCircle,
   ArrowLeft,
@@ -17,10 +17,18 @@ import {
   UserRound,
   Users,
   Clock3,
+  Camera,
+  Info,
+  ChevronDown,
+  Sparkles,
+  Zap,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useSettings } from '../../../shared/context/SettingsContext';
 import { userService } from '../../services/userService';
+
+// Asset Imports (Using the generated image)
+import premiumHeliHero from '@/assets/airways/premium_heli_hero.png';
 
 const PHONEPE_PENDING_BOOKING_KEY = 'taxi-airway-phonepe-booking';
 
@@ -42,14 +50,10 @@ const formatTravelDate = (value) => {
 
 const formatTimeLabel = (value = '') => {
   const normalized = String(value || '').trim();
-  if (!normalized) {
-    return '--';
-  }
+  if (!normalized) return '--';
 
   const date = new Date(`2000-01-01T${normalized}`);
-  if (Number.isNaN(date.getTime())) {
-    return normalized;
-  }
+  if (Number.isNaN(date.getTime())) return normalized;
 
   return date.toLocaleTimeString('en-IN', {
     hour: '2-digit',
@@ -95,6 +99,7 @@ const AirwaysRouteBooking = () => {
   const [travelDate, setTravelDate] = useState(location.state?.travelDate || tomorrowDateValue());
   const [selectedAirwayId, setSelectedAirwayId] = useState(location.state?.selectedAirwayId || '');
   const [passengerNames, setPassengerNames] = useState(['']);
+  const [currentStep, setCurrentStep] = useState(1); // 1: Route & Date, 2: Passengers, 3: Payment
   const [formData, setFormData] = useState(() => {
     const storedUser = readStoredUser();
     return {
@@ -111,7 +116,15 @@ const AirwaysRouteBooking = () => {
     : route?.airway
       ? [route.airway]
       : [];
+  
   const selectedAirway = routeAirways.find((item) => item?.id === selectedAirwayId) || routeAirways[0] || route?.airway || null;
+  
+  const heroImage = selectedAirway?.image
+    || selectedAirway?.gallery?.[0]
+    || route?.image
+    || route?.gallery?.[0]
+    || premiumHeliHero;
+
   const subtotalFare = Number(selectedAirway?.basePrice || route?.baseFare || 0) * seatCount;
   const serviceTaxPercent = Number(selectedAirway?.serviceTaxPercent || route?.serviceTaxPercent || 0);
   const serviceTaxAmount = (subtotalFare * serviceTaxPercent) / 100;
@@ -267,19 +280,43 @@ const AirwaysRouteBooking = () => {
     });
   };
 
+  const validateStep = (step) => {
+    if (step === 1) {
+      if (!travelDate) {
+        toast.error('Please select a travel date.');
+        return false;
+      }
+      return true;
+    }
+    if (step === 2) {
+      if (!formData.customerName.trim() || !formData.customerPhone.trim()) {
+        toast.error('Passenger contact name and phone are required.');
+        return false;
+      }
+      if (passengerNames.some((item) => !String(item || '').trim())) {
+        toast.error('Please enter every passenger name before proceeding.');
+        return false;
+      }
+      return true;
+    }
+    return true;
+  };
+
+  const nextStep = () => {
+    if (validateStep(currentStep)) {
+      setCurrentStep((s) => Math.min(3, s + 1));
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const prevStep = () => {
+    setCurrentStep((s) => Math.max(1, s - 1));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const handleSubmit = async () => {
     if (!activePaymentGateway) {
       toast.error('No payment gateway is enabled in the admin panel right now.');
-      return;
-    }
-
-    if (!formData.customerName.trim() || !formData.customerPhone.trim()) {
-      toast.error('Passenger contact name and phone are required.');
-      return;
-    }
-
-    if (passengerNames.some((item) => !String(item || '').trim())) {
-      toast.error('Please enter every passenger name before booking.');
       return;
     }
 
@@ -312,13 +349,6 @@ const AirwaysRouteBooking = () => {
         throw new Error('Unable to start payment');
       }
 
-      let userInfo = {};
-      try {
-        userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
-      } catch {
-        userInfo = {};
-      }
-
       const rzp = new window.Razorpay({
         key: order.keyId,
         amount: order.amount,
@@ -327,9 +357,9 @@ const AirwaysRouteBooking = () => {
         description: `${route?.originAirport || ''} to ${route?.destinationAirport || ''}`.trim(),
         order_id: order.orderId,
         prefill: {
-          name: formData.customerName || userInfo?.name || '',
-          email: formData.customerEmail || userInfo?.email || '',
-          contact: formData.customerPhone || userInfo?.phone || '',
+          name: formData.customerName,
+          email: formData.customerEmail,
+          contact: formData.customerPhone,
         },
         modal: {
           ondismiss: () => {
@@ -376,11 +406,13 @@ const AirwaysRouteBooking = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-[#F8FAFC] px-5 py-6">
-        <div className="mx-auto max-w-lg space-y-4">
-          <div className="h-12 animate-pulse rounded-2xl bg-slate-200" />
-          <div className="h-64 animate-pulse rounded-[32px] bg-white shadow-sm" />
-          <div className="h-80 animate-pulse rounded-[32px] bg-white shadow-sm" />
+      <div className="min-h-screen bg-[#F8FAFC] flex items-center justify-center">
+        <div className="text-center">
+          <div className="relative mx-auto mb-6 h-16 w-16">
+             <div className="absolute inset-0 rounded-full border-4 border-slate-100" />
+             <div className="absolute inset-0 rounded-full border-4 border-sky-500 border-t-transparent animate-spin" />
+          </div>
+          <p className="text-sm font-black text-slate-900 uppercase tracking-widest">Preparing Flight...</p>
         </div>
       </div>
     );
@@ -389,276 +421,444 @@ const AirwaysRouteBooking = () => {
   if (!route) return null;
 
   return (
-    <div className="min-h-screen bg-[#F8FAFC] pb-24 font-sans no-scrollbar">
-      {/* Sticky Header */}
-      <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-100 px-5 py-4">
-        <div className="flex items-center justify-between">
-          <button
-            type="button"
-            onClick={() => navigate('/taxi/user/airways')}
-            className="flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-50 text-slate-700 active:scale-95 transition-transform"
-          >
-            <ArrowLeft size={18} />
-          </button>
-          <h1 className="text-sm font-black text-slate-950 uppercase tracking-widest">Review & Pay</h1>
-          <div className="w-10" />
+    <div
+      className="min-h-screen bg-[#F8FAFC] pb-32 overflow-x-hidden overflow-y-auto"
+      style={{ fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}
+    >
+      {/* Immersive Hero Section */}
+      <div className="relative h-[45vh] w-full overflow-hidden">
+        <img src={heroImage} alt="Helicopter" className="h-full w-full object-cover" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[#F8FAFC]" />
+        
+        {/* Floating Header */}
+        <div className="absolute top-0 left-0 right-0 z-50 px-5 py-6">
+          <div className="flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => currentStep > 1 ? prevStep() : navigate('/taxi/user/airways')}
+              className="flex h-12 w-12 items-center justify-center rounded-[20px] bg-white/20 backdrop-blur-xl text-white border border-white/20 active:scale-95 transition-all"
+            >
+              <ArrowLeft size={20} />
+            </button>
+            <div className="flex h-12 items-center gap-3 px-5 rounded-[20px] bg-white/20 backdrop-blur-xl border border-white/20">
+              <Sparkles size={16} className="text-sky-300" />
+              <span className="text-[11px] font-black text-white uppercase tracking-widest">Premium Sector</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Hero Title Area */}
+        <div className="absolute bottom-12 left-5 right-5">
+           <motion.div
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+           >
+              <p className="text-sky-300 text-[10px] font-black uppercase tracking-[0.3em]">Exclusive Route</p>
+              <h1 className="text-white text-4xl font-['Outfit'] font-extrabold mt-2 leading-tight drop-shadow-2xl">{route.routeName}</h1>
+              <div className="mt-4 flex items-center gap-3">
+                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 backdrop-blur-md border border-white/10">
+                    <PlaneTakeoff size={12} className="text-sky-300" />
+                    <span className="text-[10px] font-bold text-white uppercase tracking-widest">{selectedAirway?.airlineName || 'Helicopter'}</span>
+                 </div>
+                 <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 backdrop-blur-md border border-emerald-500/20">
+                    <div className="h-1 w-1 rounded-full bg-emerald-400" />
+                    <span className="text-[10px] font-bold text-emerald-300 uppercase tracking-widest">Available</span>
+                 </div>
+              </div>
+           </motion.div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-lg px-5 py-6 space-y-6">
-        {/* Ticket Header Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="relative overflow-hidden rounded-[40px] bg-slate-950 p-8 text-white shadow-2xl"
-        >
-          <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.3em] text-sky-400">Flight Route</p>
-                <h2 className="mt-2 text-2xl font-black">{route.routeName}</h2>
-              </div>
-              <div className="h-12 w-12 rounded-2xl bg-white/10 flex items-center justify-center">
-                <PlaneTakeoff size={24} className="text-sky-400" />
-              </div>
-            </div>
-
-            <div className="mt-8 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-3xl font-black">{route.originAirport}</p>
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{formatTimeLabel(route.departureTime)}</p>
-              </div>
-              <div className="flex flex-col items-center gap-2">
-                <div className="px-3 py-1 rounded-full bg-white/10 text-[9px] font-black uppercase tracking-widest text-white/60">
-                  {route.durationMinutes} mins
+      {/* Main Content Container */}
+      <div className="relative z-10 mx-auto max-w-lg px-5 -mt-8">
+        
+        {/* Step Indicator */}
+        <div className="flex items-center justify-between mb-8 px-4">
+           {[1, 2, 3].map((step) => (
+             <React.Fragment key={step}>
+                <div className="flex flex-col items-center gap-2">
+                   <div className={`h-10 w-10 rounded-2xl flex items-center justify-center border-2 transition-all duration-500 ${
+                     currentStep === step 
+                      ? 'bg-slate-950 border-slate-950 text-white shadow-xl shadow-slate-950/20 scale-110' 
+                      : currentStep > step 
+                        ? 'bg-emerald-500 border-emerald-500 text-white' 
+                        : 'bg-white border-slate-100 text-slate-400'
+                   }`}>
+                      {currentStep > step ? <CheckCircle2 size={20} /> : <span className="text-sm font-black">{step}</span>}
+                   </div>
+                   <span className={`text-[9px] font-black uppercase tracking-widest ${currentStep === step ? 'text-slate-950' : 'text-slate-400'}`}>
+                      {step === 1 ? 'Details' : step === 2 ? 'Passengers' : 'Payment'}
+                   </span>
                 </div>
-                <div className="flex items-center gap-1.5 w-20">
-                  <div className="h-1 w-1 rounded-full bg-white/40" />
-                  <div className="h-px flex-1 bg-white/20" />
-                  <PlaneTakeoff size={14} className="text-sky-400" />
-                  <div className="h-px flex-1 bg-white/20" />
-                  <div className="h-1 w-1 rounded-full bg-white/40" />
-                </div>
-                <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest">Direct</p>
-              </div>
-              <div className="space-y-1 text-right">
-                <p className="text-3xl font-black">{route.destinationAirport}</p>
-                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{formatTimeLabel(route.arrivalTime)}</p>
-              </div>
-            </div>
-
-            <div className="mt-8 pt-8 border-t border-white/10 flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Travel Date</p>
-                <p className="mt-1 text-sm font-black">{formatTravelDate(travelDate)}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[10px] font-black uppercase tracking-widest text-white/40">Aircraft</p>
-                <p className="mt-1 text-sm font-black">{selectedAirway?.airlineName || 'Helicopter'}</p>
-              </div>
-            </div>
-          </div>
-          <div className="absolute -right-20 -bottom-20 h-64 w-64 rounded-full bg-sky-500/10 blur-[100px]" />
-          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-orange-500/10 blur-[100px]" />
-        </motion.div>
-
-        {/* Flight Selector (if multiple) */}
-        {routeAirways.length > 1 && (
-          <section className="space-y-3">
-            <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest ml-1">Change Operator</h3>
-            <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
-              {routeAirways.map((airway) => (
-                <button
-                  key={airway.id}
-                  onClick={() => setSelectedAirwayId(airway.id)}
-                  className={`min-w-[180px] rounded-3xl p-4 border transition-all ${
-                    selectedAirwayId === airway.id
-                      ? 'bg-white border-sky-500 shadow-md ring-4 ring-sky-500/5'
-                      : 'bg-white border-slate-100 text-slate-400'
-                  }`}
-                >
-                  <p className="text-[10px] font-black uppercase tracking-widest">{airway.airlineCode}</p>
-                  <p className={`text-sm font-black mt-1 ${selectedAirwayId === airway.id ? 'text-slate-950' : ''}`}>{airway.airlineName}</p>
-                  <p className="text-[10px] font-bold mt-2">{formatCurrency(airway.basePrice)}</p>
-                </button>
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Passengers & Date Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-2xl bg-sky-50 flex items-center justify-center text-sky-600">
-                <Users size={18} />
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Seats</p>
-                <div className="flex items-center gap-4 mt-1">
-                  <button
-                    onClick={() => handleSeatAdjust('decrement')}
-                    className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-900 active:bg-slate-100 transition-colors"
-                  >
-                    -
-                  </button>
-                  <span className="text-lg font-black">{seatCount}</span>
-                  <button
-                    onClick={() => handleSeatAdjust('increment')}
-                    className="h-8 w-8 rounded-full bg-slate-50 flex items-center justify-center text-slate-900 active:bg-slate-100 transition-colors"
-                  >
-                    +
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-          <div className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="h-10 w-10 rounded-2xl bg-orange-50 flex items-center justify-center text-orange-600">
-                <CalendarDays size={18} />
-              </div>
-              <div className="flex-1">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Travel Date</p>
-                <input
-                  type="date"
-                  value={travelDate}
-                  onChange={(e) => setTravelDate(e.target.value)}
-                  className="w-full bg-transparent mt-1 text-sm font-black text-slate-900 outline-none"
-                />
-              </div>
-            </div>
-          </div>
+                {step < 3 && (
+                  <div className={`h-0.5 flex-1 mx-2 rounded-full transition-all duration-700 ${currentStep > step ? 'bg-emerald-500' : 'bg-slate-100'}`} />
+                )}
+             </React.Fragment>
+           ))}
         </div>
 
-        {/* Contact Details */}
-        <section className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm space-y-5">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-violet-50 flex items-center justify-center text-violet-600">
-              <UserRound size={18} />
-            </div>
-            <h3 className="text-sm font-black text-slate-950 uppercase tracking-widest">Contact Details</h3>
-          </div>
+        <AnimatePresence mode="wait">
+          {currentStep === 1 && (
+            <motion.div
+              key="step-1"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              {/* Boarding Pass Style Card */}
+              <div className="group relative overflow-hidden rounded-[40px] bg-white border border-slate-100 shadow-[0_32px_64px_-12px_rgba(15,23,42,0.1)] transition-all hover:shadow-[0_48px_80px_-16px_rgba(15,23,42,0.12)]">
+                 <div className="p-8">
+                    <div className="flex items-center justify-between mb-8">
+                       <div className="space-y-1">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Origin</p>
+                          <h3 className="text-3xl font-['Outfit'] font-black text-slate-950">{route.originAirport}</h3>
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{formatTimeLabel(route.departureTime)}</p>
+                       </div>
+                       <div className="flex flex-col items-center gap-3">
+                          <div className="px-4 py-1.5 rounded-full bg-sky-50 text-sky-600 text-[10px] font-black uppercase tracking-widest">
+                             {route.durationMinutes}m Flight
+                          </div>
+                          <div className="flex items-center gap-2 w-28">
+                             <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+                             <div className="h-px flex-1 bg-slate-100" />
+                             <div className="p-2 rounded-xl bg-slate-50 text-sky-500 group-hover:rotate-12 transition-transform duration-500">
+                                <PlaneTakeoff size={18} />
+                             </div>
+                             <div className="h-px flex-1 bg-slate-100" />
+                             <div className="h-1.5 w-1.5 rounded-full bg-slate-200" />
+                          </div>
+                          <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Direct</p>
+                       </div>
+                       <div className="text-right space-y-1">
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Destination</p>
+                          <h3 className="text-3xl font-['Outfit'] font-black text-slate-950">{route.destinationAirport}</h3>
+                          <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">{formatTimeLabel(route.arrivalTime)}</p>
+                       </div>
+                    </div>
 
-          <div className="space-y-4">
-            <div className="space-y-1.5">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
-              <input
-                value={formData.customerName}
-                onChange={(e) => setField('customerName', e.target.value)}
-                placeholder="Lead passenger name"
-                className="w-full rounded-2xl bg-slate-50 px-5 py-3.5 text-sm font-black text-slate-900 outline-none border border-transparent focus:border-violet-200 transition-all"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone</label>
-                <input
-                  value={formData.customerPhone}
-                  onChange={(e) => setField('customerPhone', e.target.value)}
-                  placeholder="9876543210"
-                  className="w-full rounded-2xl bg-slate-50 px-5 py-3.5 text-sm font-black text-slate-900 outline-none border border-transparent focus:border-violet-200 transition-all"
-                />
+                    <div className="grid grid-cols-2 gap-4">
+                       <div className="space-y-4">
+                          <div className="relative">
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Travel Date</label>
+                            <div className="relative">
+                               <CalendarDays size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                               <input 
+                                 type="date" 
+                                 value={travelDate}
+                                 onChange={(e) => setTravelDate(e.target.value)}
+                                 className="w-full bg-slate-50 rounded-2xl pl-12 pr-4 py-4 text-sm font-black text-slate-950 outline-none border border-transparent focus:border-sky-200 transition-all"
+                               />
+                            </div>
+                          </div>
+                       </div>
+                       <div className="space-y-4">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-2 block">Total Seats</label>
+                          <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-2 h-[54px]">
+                             <button 
+                               onClick={() => handleSeatAdjust('decrement')}
+                               className="h-10 w-10 rounded-xl bg-white text-slate-900 flex items-center justify-center shadow-sm active:scale-90 transition-all"
+                             >
+                               -
+                             </button>
+                             <span className="text-lg font-black">{seatCount}</span>
+                             <button 
+                               onClick={() => handleSeatAdjust('increment')}
+                               className="h-10 w-10 rounded-xl bg-white text-slate-900 flex items-center justify-center shadow-sm active:scale-90 transition-all"
+                             >
+                               +
+                             </button>
+                          </div>
+                       </div>
+                    </div>
+                 </div>
+
+                 {/* Operator Bar */}
+                 <div className="bg-slate-50 px-8 py-5 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                       <div className="h-10 w-10 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 overflow-hidden">
+                          {selectedAirway?.image ? <img src={selectedAirway.image} className="h-full w-full object-cover" /> : <PlaneTakeoff size={18} />}
+                       </div>
+                       <div>
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Operator</p>
+                          <p className="text-[11px] font-black text-slate-950">{selectedAirway?.airlineName || 'Premium Heli'}</p>
+                       </div>
+                    </div>
+                    <div className="text-right">
+                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Per Seat</p>
+                       <p className="text-base font-black text-sky-600">{formatCurrency(selectedAirway?.basePrice)}</p>
+                    </div>
+                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
-                <input
-                  value={formData.customerEmail}
-                  onChange={(e) => setField('customerEmail', e.target.value)}
-                  placeholder="email@example.com"
-                  className="w-full rounded-2xl bg-slate-50 px-5 py-3.5 text-sm font-black text-slate-900 outline-none border border-transparent focus:border-violet-200 transition-all"
-                />
-              </div>
-            </div>
-          </div>
-        </section>
 
-        {/* Passenger Roster */}
-        <section className="rounded-[32px] bg-white p-6 border border-slate-100 shadow-sm space-y-5">
-          <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-2xl bg-emerald-50 flex items-center justify-center text-emerald-600">
-              <Users size={18} />
-            </div>
-            <h3 className="text-sm font-black text-slate-950 uppercase tracking-widest">Passenger Roster</h3>
-          </div>
-
-          <div className="space-y-3">
-            {passengerNames.map((name, idx) => (
-              <div key={idx} className="relative">
-                <span className="absolute left-5 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-300">P{idx + 1}</span>
-                <input
-                  value={name}
-                  onChange={(e) => setPassengerName(idx, e.target.value)}
-                  placeholder={`Full Name of Passenger ${idx + 1}`}
-                  className="w-full rounded-2xl bg-slate-50 pl-12 pr-5 py-3.5 text-sm font-black text-slate-900 outline-none border border-transparent focus:border-emerald-200 transition-all"
-                />
-              </div>
-            ))}
-          </div>
-        </section>
-
-        {/* Fare Summary */}
-        <section className="rounded-[32px] bg-white p-8 border border-slate-100 shadow-sm space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black text-slate-950 uppercase tracking-widest">Fare Breakup</h3>
-            <div className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-[9px] font-black uppercase tracking-widest">
-              Live Fare
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex justify-between text-sm font-bold text-slate-500">
-              <span>Seat Fare ({seatCount} x {formatCurrency(selectedAirway?.basePrice)})</span>
-              <span className="text-slate-900">{formatCurrency(subtotalFare)}</span>
-            </div>
-            <div className="flex justify-between text-sm font-bold text-slate-500">
-              <span>Service Tax ({serviceTaxPercent}%)</span>
-              <span className="text-slate-900">{formatCurrency(serviceTaxAmount)}</span>
-            </div>
-            <div className="h-px bg-slate-50 pt-2" />
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-black text-slate-950">Grand Total</span>
-              <span className="text-2xl font-black text-sky-600">{formatCurrency(totalFare)}</span>
-            </div>
-          </div>
-
-          <div className="rounded-2xl bg-slate-50 p-4 flex items-start gap-3">
-            <ShieldCheck size={18} className="text-sky-600 mt-0.5" />
-            <div>
-              <p className="text-[11px] font-black text-slate-900">Secure Payment Guaranteed</p>
-              <p className="text-[10px] font-bold text-slate-400 mt-0.5">Your payment is processed through encrypted channels via {activePaymentGateway?.label || 'Online'}.</p>
-            </div>
-          </div>
-        </section>
-
-        {/* Payment Button */}
-        <div className="pt-2">
-          <button
-            onClick={handleSubmit}
-            disabled={submitting || !activePaymentGateway}
-            className="w-full group relative overflow-hidden rounded-[28px] bg-slate-950 py-5 text-white shadow-2xl active:scale-[0.98] transition-all disabled:opacity-50"
-          >
-            <div className="relative z-10 flex items-center justify-center gap-3">
-              {submitting ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
-              ) : (
-                <CreditCard size={20} />
+              {/* Operator Selector (if multiple) */}
+              {routeAirways.length > 1 && (
+                <div className="space-y-3">
+                   <h3 className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em] ml-1">Alternative Operators</h3>
+                   <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2">
+                      {routeAirways.map((airway) => (
+                        <button
+                          key={airway.id}
+                          onClick={() => setSelectedAirwayId(airway.id)}
+                          className={`min-w-[200px] rounded-[28px] p-4 border-2 transition-all ${
+                            selectedAirwayId === airway.id 
+                            ? 'bg-white border-slate-950 shadow-xl' 
+                            : 'bg-white border-transparent shadow-sm'
+                          }`}
+                        >
+                           <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
+                                 {airway.image ? <img src={airway.image} className="h-full w-full object-cover" /> : <PlaneTakeoff size={16} />}
+                              </div>
+                              <div className="text-left">
+                                 <p className="text-[11px] font-black text-slate-950 truncate max-w-[100px]">{airway.airlineName}</p>
+                                 <p className="text-[10px] font-bold text-sky-600 mt-0.5">{formatCurrency(airway.basePrice)}</p>
+                              </div>
+                           </div>
+                        </button>
+                      ))}
+                   </div>
+                </div>
               )}
-              <span className="text-sm font-black uppercase tracking-[0.2em]">
-                {submitting ? 'Processing Payment...' : `Pay ${formatCurrency(totalFare)} Now`}
-              </span>
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-sky-500/20 to-orange-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-          </button>
-          
-          {!activePaymentGateway && (
-            <div className="mt-4 p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-3">
-              <AlertCircle size={18} className="text-amber-600 shrink-0" />
-              <p className="text-[10px] font-bold text-amber-800">
-                Online payment is currently unavailable. Please enable a payment gateway in the admin panel to proceed.
-              </p>
-            </div>
+
+              <button
+                onClick={nextStep}
+                className="w-full flex items-center justify-center gap-3 rounded-[28px] bg-slate-950 py-5 text-white shadow-2xl shadow-slate-950/20 active:scale-[0.98] transition-all group"
+              >
+                <span className="text-sm font-black uppercase tracking-widest">Continue to Passengers</span>
+                <ChevronRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              </button>
+            </motion.div>
           )}
+
+          {currentStep === 2 && (
+            <motion.div
+              key="step-2"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              {/* Contact Information */}
+              <div className="rounded-[40px] bg-white border border-slate-100 p-8 shadow-sm space-y-6">
+                <div className="flex items-center gap-3">
+                   <div className="h-12 w-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center">
+                      <UserRound size={22} />
+                   </div>
+                   <div>
+                      <h3 className="text-base font-black text-slate-950 uppercase tracking-widest">Contact Info</h3>
+                      <p className="text-[11px] font-bold text-slate-400 mt-1">E-ticket will be sent here</p>
+                   </div>
+                </div>
+
+                <div className="space-y-4">
+                   <div className="space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                      <div className="relative">
+                         <UserRound size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                         <input 
+                           value={formData.customerName}
+                           onChange={(e) => setField('customerName', e.target.value)}
+                           placeholder="Primary passenger"
+                           className="w-full bg-slate-50 rounded-2xl pl-12 pr-4 py-4 text-sm font-black text-slate-950 outline-none border border-transparent focus:border-violet-200 transition-all"
+                         />
+                      </div>
+                   </div>
+                   <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-1.5">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone</label>
+                         <div className="relative">
+                            <Phone size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                            <input 
+                              value={formData.customerPhone}
+                              onChange={(e) => setField('customerPhone', e.target.value)}
+                              placeholder="9876..."
+                              className="w-full bg-slate-50 rounded-2xl pl-12 pr-4 py-4 text-sm font-black text-slate-950 outline-none border border-transparent focus:border-violet-200 transition-all"
+                            />
+                         </div>
+                      </div>
+                      <div className="space-y-1.5">
+                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email</label>
+                         <div className="relative">
+                            <FileText size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" />
+                            <input 
+                              value={formData.customerEmail}
+                              onChange={(e) => setField('customerEmail', e.target.value)}
+                              placeholder="alex@.."
+                              className="w-full bg-slate-50 rounded-2xl pl-12 pr-4 py-4 text-sm font-black text-slate-950 outline-none border border-transparent focus:border-violet-200 transition-all"
+                            />
+                         </div>
+                      </div>
+                   </div>
+                </div>
+              </div>
+
+              {/* Passenger Roster */}
+              <div className="rounded-[40px] bg-white border border-slate-100 p-8 shadow-sm space-y-6">
+                 <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                       <Users size={22} />
+                    </div>
+                    <div>
+                       <h3 className="text-base font-black text-slate-950 uppercase tracking-widest">Passenger List</h3>
+                       <p className="text-[11px] font-bold text-slate-400 mt-1">Exact name as per ID</p>
+                    </div>
+                 </div>
+
+                 <div className="space-y-3">
+                    {passengerNames.map((name, idx) => (
+                      <motion.div 
+                        key={idx}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.1 }}
+                        className="relative"
+                      >
+                         <div className="absolute left-4 top-1/2 -translate-y-1/2 h-7 w-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] font-black">
+                            {idx + 1}
+                         </div>
+                         <input 
+                           value={name}
+                           onChange={(e) => setPassengerName(idx, e.target.value)}
+                           placeholder={`Passenger ${idx + 1} Full Name`}
+                           className="w-full bg-slate-50 rounded-2xl pl-14 pr-4 py-4 text-sm font-black text-slate-950 outline-none border border-transparent focus:border-emerald-200 transition-all shadow-inner"
+                         />
+                      </motion.div>
+                    ))}
+                 </div>
+              </div>
+
+              <div className="flex gap-4">
+                 <button 
+                   onClick={prevStep}
+                   className="h-[64px] px-8 rounded-[28px] bg-white border border-slate-100 text-slate-900 font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm"
+                 >
+                    Back
+                 </button>
+                 <button
+                   onClick={nextStep}
+                   className="flex-1 h-[64px] rounded-[28px] bg-slate-950 text-white font-black uppercase tracking-widest active:scale-95 transition-all shadow-2xl shadow-slate-950/20"
+                 >
+                    Next Step
+                 </button>
+              </div>
+            </motion.div>
+          )}
+
+          {currentStep === 3 && (
+            <motion.div
+              key="step-3"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              className="space-y-6"
+            >
+              {/* Fare Summary Card */}
+              <div className="rounded-[40px] bg-white border border-slate-100 p-8 shadow-sm space-y-8">
+                 <div className="flex items-center justify-between">
+                    <h3 className="text-base font-black text-slate-950 uppercase tracking-widest">Fare Summary</h3>
+                    <div className="h-8 w-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                       <CreditCard size={18} />
+                    </div>
+                 </div>
+
+                 <div className="space-y-4">
+                    <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+                       <div className="flex items-center gap-2">
+                          <Users size={14} className="text-slate-300" />
+                          <span>Seats ({seatCount} x {formatCurrency(selectedAirway?.basePrice)})</span>
+                       </div>
+                       <span className="text-slate-950">{formatCurrency(subtotalFare)}</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm font-bold text-slate-500">
+                       <div className="flex items-center gap-2">
+                          <Zap size={14} className="text-slate-300" />
+                          <span>Service Tax ({serviceTaxPercent}%)</span>
+                       </div>
+                       <span className="text-slate-950">{formatCurrency(serviceTaxAmount)}</span>
+                    </div>
+                    <div className="h-px bg-slate-50" />
+                    <div className="flex justify-between items-end">
+                       <div>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Payable</p>
+                          <p className="text-3xl font-['Outfit'] font-black text-slate-950 mt-1">{formatCurrency(totalFare)}</p>
+                       </div>
+                       <div className="px-4 py-2 rounded-2xl bg-emerald-50 border border-emerald-100 flex items-center gap-2">
+                          <ShieldCheck size={14} className="text-emerald-600" />
+                          <span className="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Price Secured</span>
+                       </div>
+                    </div>
+                 </div>
+              </div>
+
+              {/* Flight Summary Box */}
+              <div className="rounded-[32px] bg-slate-950 p-6 text-white overflow-hidden relative">
+                 <div className="relative z-10 space-y-4">
+                    <div className="flex items-center gap-3">
+                       <div className="h-8 w-8 rounded-lg bg-white/10 flex items-center justify-center">
+                          <PlaneTakeoff size={16} className="text-sky-300" />
+                       </div>
+                       <span className="text-[10px] font-black uppercase tracking-widest text-sky-300">{route.routeName}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm font-bold">
+                       <span>{formatTravelDate(travelDate)}</span>
+                       <span className="text-white/60">{formatTimeLabel(route.departureTime)}</span>
+                    </div>
+                 </div>
+                 <PlaneTakeoff size={100} className="absolute -right-8 -bottom-8 text-white/5 rotate-12" />
+              </div>
+
+              <div className="flex gap-4">
+                 <button 
+                   onClick={prevStep}
+                   className="h-[64px] px-8 rounded-[28px] bg-white border border-slate-100 text-slate-900 font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm"
+                 >
+                    Back
+                 </button>
+                 <button
+                   onClick={handleSubmit}
+                   disabled={submitting || !activePaymentGateway}
+                   className="flex-1 h-[64px] relative overflow-hidden rounded-[28px] bg-slate-950 text-white font-black uppercase tracking-widest active:scale-95 transition-all shadow-2xl shadow-slate-950/20 disabled:opacity-50"
+                 >
+                    <div className="relative z-10 flex items-center justify-center gap-3">
+                       {submitting ? (
+                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                       ) : (
+                         <Sparkles size={18} className="text-sky-300" />
+                       )}
+                       <span>{submitting ? 'Authenticating...' : `Confirm & Pay`}</span>
+                    </div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-sky-500/10 to-transparent animate-pulse" />
+                 </button>
+              </div>
+
+              {!activePaymentGateway && (
+                <div className="p-4 rounded-2xl bg-amber-50 border border-amber-100 flex items-start gap-3">
+                   <AlertCircle size={18} className="text-amber-600 shrink-0" />
+                   <p className="text-[10px] font-bold text-amber-800">Payments are currently restricted. Please contact support.</p>
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Support Section */}
+        <div className="mt-12 text-center">
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Need help with booking?</p>
+           <div className="mt-4 flex items-center justify-center gap-6">
+              <button className="flex flex-col items-center gap-2">
+                 <div className="h-12 w-12 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-900 shadow-sm active:scale-90 transition-all">
+                    <Phone size={18} />
+                 </div>
+                 <span className="text-[9px] font-black text-slate-950 uppercase tracking-widest">Call</span>
+              </button>
+              <button className="flex flex-col items-center gap-2">
+                 <div className="h-12 w-12 rounded-full bg-white border border-slate-100 flex items-center justify-center text-slate-900 shadow-sm active:scale-90 transition-all">
+                    <Info size={18} />
+                 </div>
+                 <span className="text-[9px] font-black text-slate-950 uppercase tracking-widest">Guide</span>
+              </button>
+           </div>
         </div>
       </div>
     </div>

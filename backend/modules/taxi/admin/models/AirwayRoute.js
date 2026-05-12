@@ -76,6 +76,14 @@ const airwayRouteSchema = new mongoose.Schema(
       default: '',
       trim: true,
     },
+    image: {
+      type: String,
+      default: '',
+    },
+    gallery: {
+      type: [String],
+      default: [],
+    },
   },
   { timestamps: true },
 );

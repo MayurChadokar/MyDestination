@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, Edit2, Helicopter, Phone, Plus, Save, Search, Trash2, UserRound, Users } from 'lucide-react';
+import { ChevronRight, Edit2, Helicopter, Phone, Plus, Save, Search, Trash2, UserRound, Users, Image as ImageIcon, Upload } from 'lucide-react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -116,6 +116,40 @@ const AirwaysManager = ({ mode: modeProp = null }) => {
     } catch {
       toast.error('Failed to delete helicopter.');
     }
+  };
+
+  const handleImageChange = (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setField('image', reader.result);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGalleryChange = (event) => {
+    const files = Array.from(event.target.files || []);
+    if (files.length === 0) return;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setFormData((current) => ({
+          ...current,
+          gallery: [...(current.gallery || []), reader.result],
+        }));
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const removeGalleryImage = (index) => {
+    setFormData((current) => ({
+      ...current,
+      gallery: (current.gallery || []).filter((_, i) => i !== index),
+    }));
   };
 
   const serviceTaxAmount = useMemo(
@@ -317,6 +351,68 @@ const AirwaysManager = ({ mode: modeProp = null }) => {
                 <div className="md:col-span-2">
                   <label className={labelClass}>Internal Notes</label>
                   <textarea className={`${inputClass} min-h-28`} value={formData.notes} onChange={(event) => setField('notes', event.target.value)} />
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Helicopter Image</label>
+                  <div className="group relative mt-2 overflow-hidden rounded-[32px] border-2 border-dashed border-slate-200 bg-slate-50 transition-all hover:border-slate-300">
+                    {formData.image ? (
+                      <div className="relative h-48 w-full p-2">
+                        <img src={formData.image} alt="Helicopter" className="h-full w-full rounded-[24px] object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setField('image', '')}
+                          className="absolute right-6 top-6 rounded-full bg-white/90 p-2 text-rose-500 shadow-xl backdrop-blur-md transition hover:bg-white active:scale-95"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-black/10 pointer-events-none">
+                          <p className="rounded-full bg-white/90 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-900 shadow-xl backdrop-blur-md">
+                            Change Image
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="flex h-48 cursor-pointer flex-col items-center justify-center gap-3">
+                        <div className="rounded-2xl bg-white p-4 text-slate-400 shadow-sm transition group-hover:scale-110 group-hover:text-slate-600">
+                          <Upload size={24} />
+                        </div>
+                        <div className="text-center">
+                          <p className="text-sm font-black text-slate-900">Upload Helicopter Image</p>
+                          <p className="mt-1 text-[11px] font-bold text-slate-400 uppercase tracking-widest">JPG, PNG up to 2MB</p>
+                        </div>
+                        <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
+                      </label>
+                    )}
+                    {formData.image && (
+                       <input type="file" className="absolute inset-0 cursor-pointer opacity-0" accept="image/*" onChange={handleImageChange} />
+                    )}
+                  </div>
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className={labelClass}>Helicopter Gallery</label>
+                  <div className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-3">
+                    {(formData.gallery || []).map((img, idx) => (
+                      <div key={idx} className="group relative aspect-square overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+                        <img src={img} alt={`Gallery ${idx}`} className="h-full w-full object-cover transition duration-500 group-hover:scale-110" />
+                        <button
+                          type="button"
+                          onClick={() => removeGalleryImage(idx)}
+                          className="absolute right-2 top-2 rounded-full bg-white/90 p-1.5 text-rose-500 shadow-lg backdrop-blur-md transition hover:bg-white active:scale-90"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    ))}
+                    <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 rounded-[24px] border-2 border-dashed border-slate-200 bg-slate-50 transition-all hover:border-slate-300 hover:bg-slate-100/50 shadow-sm">
+                      <div className="rounded-xl bg-white p-2.5 text-slate-400 shadow-sm">
+                        <Plus size={20} />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center px-2">Add Gallery Photo</span>
+                      <input type="file" className="hidden" accept="image/*" multiple onChange={handleGalleryChange} />
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>

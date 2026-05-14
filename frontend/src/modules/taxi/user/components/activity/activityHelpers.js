@@ -7,7 +7,7 @@ import SuvIcon from '../../../../assets/icons/SUV.png';
 import busIcon from '../../../../assets/3d images/AutoCab/bus.png';
 
 export const PAGE_SIZE = 4;
-export const TABS = ['All', 'Rides', 'Parcels', 'Rental', 'Bus', 'Pooling', 'Outstation', 'Scheduled', 'Support'];
+export const TABS = ['All', 'Rides', 'Parcels', 'Rental', 'Bus', 'Pooling', 'Airways', 'Outstation', 'Scheduled', 'Support'];
 
 export const pickFirstString = (...values) => {
   for (const value of values) {
@@ -289,5 +289,38 @@ export const normalizeRentalBooking = (booking) => {
     ),
     booking,
     sortTimestamp: toTimestamp(booking?.updatedAt || booking?.pickupDateTime || booking?.createdAt),
+  };
+};
+
+export const normalizeAirwayBooking = (booking) => {
+  const routeName = pickFirstString(
+    booking?.routeName,
+    booking?.flightNumber ? `Flight ${booking.flightNumber}` : '',
+    'Airways booking',
+  );
+  const airwayName = pickFirstString(booking?.airwayName, 'Helicopter service');
+  const status = formatStatus(booking?.bookingStatus || booking?.paymentStatus || 'confirmed');
+  const passengerCount = Number(booking?.seatCount || 0);
+
+  return {
+    id: booking?.id || booking?._id,
+    type: 'airways',
+    title: routeName,
+    address: pickFirstString(
+      booking?.routeName,
+      booking?.flightNumber,
+      'Helicopter route',
+    ),
+    date: formatRideDate(booking?.travelDate),
+    time: formatRideTime(booking?.travelDate),
+    status,
+    statusTone: getStatusTone(status),
+    price: Number(booking?.totalFare || 0).toFixed(0),
+    driverName: airwayName,
+    eyebrow: `${airwayName}${passengerCount > 0 ? ` • ${passengerCount} passenger${passengerCount === 1 ? '' : 's'}` : ''}`,
+    driverImage: buildAvatarFallback(airwayName),
+    vehicleImage: getVehicleVisual(null, 'pooling'),
+    booking,
+    sortTimestamp: toTimestamp(booking?.updatedAt || booking?.createdAt || booking?.travelDate),
   };
 };

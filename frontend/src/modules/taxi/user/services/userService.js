@@ -2,9 +2,12 @@ import api from '../../../shared/api/axiosInstance';
 import { withUserAuth } from './authService';
 import {
   createUserAirwayBooking,
+  createUserAirwayBookingOrder,
+  getUserAirwayBookings,
   getUserAirwayBooking,
   getUserAirwayRoute,
   getUserAirwayRoutes,
+  verifyUserAirwayBookingPayment,
 } from '../../admin/services/airwaysService';
 
 export const userService = {
@@ -98,6 +101,9 @@ export const userService = {
   },
   getAirwayRoutes: async (filters = {}) => getUserAirwayRoutes(filters),
   getAirwayRoute: async (routeId) => getUserAirwayRoute(routeId),
+  getMyAirwayBookings: async (params = {}) => getUserAirwayBookings(params),
+  createAirwayBookingOrder: async (payload) => createUserAirwayBookingOrder(payload),
+  verifyAirwayBookingPayment: async (payload) => verifyUserAirwayBookingPayment(payload),
   createAirwayBooking: async (payload) => createUserAirwayBooking(payload),
   getAirwayBooking: async (bookingId) => getUserAirwayBooking(bookingId),
 };

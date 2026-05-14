@@ -60,6 +60,15 @@ import {
   createPoolingBooking,
   getMyPoolingBookings
 } from '../controllers/poolingController.js';
+import {
+  createAirwayBooking,
+  createAirwayBookingOrder,
+  verifyAirwayBookingPayment,
+  getAirwayRouteDetails,
+  listMyAirwayBookings,
+  getMyAirwayBooking,
+  searchAirwayRoutes,
+} from '../controllers/airwaysController.js';
 import { getAppModules, getGoodsTypes, getPublicRentalVehicleCatalog, getPublicVehicleTypeCatalog } from '../../admin/controllers/adminController.js';
 import { triggerUserSosAlert } from '../../safety/controllers/safetyController.js';
 
@@ -127,3 +136,10 @@ userRouter.post('/pooling/bookings/order', authenticateOrResolveUser(['user']), 
 userRouter.post('/pooling/bookings/verify', authenticateOrResolveUser(['user']), asyncHandler(verifyPoolingBookingPayment));
 userRouter.post('/pooling/bookings', authenticateOrResolveUser(['user']), asyncHandler(createPoolingBooking));
 userRouter.get('/pooling/bookings', authenticateOrResolveUser(['user']), asyncHandler(getMyPoolingBookings));
+userRouter.get('/airways/search', authenticateOrResolveUser(['user']), asyncHandler(searchAirwayRoutes));
+userRouter.get('/airways/routes/:id', authenticateOrResolveUser(['user']), asyncHandler(getAirwayRouteDetails));
+userRouter.post('/airways/bookings/order', authenticateOrResolveUser(['user']), asyncHandler(createAirwayBookingOrder));
+userRouter.post('/airways/bookings/verify', authenticateOrResolveUser(['user']), asyncHandler(verifyAirwayBookingPayment));
+userRouter.get('/airways/bookings', authenticateOrResolveUser(['user']), asyncHandler(listMyAirwayBookings));
+userRouter.post('/airways/bookings', authenticateOrResolveUser(['user']), asyncHandler(createAirwayBooking));
+userRouter.get('/airways/bookings/:id', authenticateOrResolveUser(['user']), asyncHandler(getMyAirwayBooking));

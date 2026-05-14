@@ -106,6 +106,17 @@ export const createDefaultAppSettings = () => ({
       active: true,
       mobile_menu_icon: '/outstation_service_icon.png',
     },
+    {
+      _id: objectId(),
+      name: 'Helicopter',
+      transport_type: 'taxi',
+      service_type: 'airways',
+      order_by: 8,
+      short_description: 'Heli route booking',
+      description: 'Book helicopter seats for mountain shuttles and scenic heli sectors.',
+      active: true,
+      mobile_menu_icon: '/helicopter_icon.png',
+    },
   ],
   onboarding_screens: [
     {

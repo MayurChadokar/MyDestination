@@ -10,6 +10,15 @@ export const weddingService = {
     }
   },
 
+  getCategories: async () => {
+    try {
+      const response = await api.get('/wedding/categories');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   getVenues: async (destinationId) => {
     try {
       const url = destinationId ? `/wedding/venues?destinationId=${destinationId}` : '/wedding/venues';
@@ -277,6 +286,61 @@ export const weddingService = {
   deleteVendorVenue: async (id) => {
     try {
       const response = await api.delete(`/wedding/vendor/venues/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  // Testimonials
+  getTestimonials: async () => {
+    try {
+      const response = await api.get('/wedding/testimonials');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  submitTestimonial: async (data) => {
+    try {
+      const response = await api.post('/wedding/testimonials', data);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getAdminTestimonials: async () => {
+    try {
+      const response = await api.get('/wedding/admin/testimonials');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  updateTestimonialStatus: async (id, status) => {
+    try {
+      const response = await api.patch(`/wedding/admin/testimonials/${id}/status`, { status });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  deleteTestimonial: async (id) => {
+    try {
+      const response = await api.delete(`/wedding/admin/testimonials/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  getMyEnquiries: async () => {
+    try {
+      const response = await api.get('/wedding/my-enquiries');
       return response.data;
     } catch (error) {
       throw error.response?.data || error.message;

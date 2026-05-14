@@ -3,6 +3,7 @@ import { Heart, Home, MapPin, Users, MessageSquare, Menu, X, User } from "lucide
 import { useState, useEffect } from "react";
 import ProfileDrawer from "./ProfileDrawer";
 import logoImg from "../assets/logo.png";
+import { weddingService } from "../../../services/weddingService";
 
 const navLinks = [
   { to: "/wedding", label: "Home", icon: Home },
@@ -22,6 +23,7 @@ const megaMenuData = [
     },
     {
       title: "Planning & Decor", links: [
+        { label: "Venue Managers", to: "/wedding/vendors?category=Venue%20Manager" },
         { label: "Wedding Planners", to: "/wedding/vendors?category=Planning%20%26%20Decor" },
         { label: "Decorators", to: "/wedding/vendors?category=Planning%20%26%20Decor" }
       ]
@@ -92,13 +94,21 @@ const WeddingLayout = () => {
   const hideNav = isGallery || isBookingDetail;
 
   const [footerDestinations, setFooterDestinations] = useState([]);
+  const [footerCategories, setFooterCategories] = useState([]);
 
   useEffect(() => {
     const fetchFooterData = async () => {
       try {
-        const data = await weddingService.getDestinations();
-        if (Array.isArray(data)) {
-          setFooterDestinations(data.slice(0, 6));
+        const [destData, catData] = await Promise.all([
+          weddingService.getDestinations(),
+          weddingService.getCategories()
+        ]);
+
+        if (Array.isArray(destData)) {
+          setFooterDestinations(destData.slice(0, 6));
+        }
+        if (Array.isArray(catData)) {
+          setFooterCategories(catData.slice(0, 5));
         }
       } catch (error) {
         console.error("Footer fetch error", error);
@@ -315,8 +325,14 @@ const WeddingLayout = () => {
               <div>
                 <h4 className="font-semibold mb-3 text-sm uppercase tracking-wider">Services</h4>
                 <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm opacity-70">
-                  {["Full Planning", "Decor & Design", "Photography", "Catering", "Entertainment"].map((s) => (
-                    <p key={s}>{s}</p>
+                  {(footerCategories.length > 0 ? footerCategories : [{ name: "Full Planning" }, { name: "Decor & Design" }, { name: "Photography" }, { name: "Catering" }, { name: "Entertainment" }]).map((s) => (
+                    <Link 
+                      key={s._id || s.name} 
+                      to={`/wedding/vendors?category=${encodeURIComponent(s.name)}`}
+                      className="block hover:opacity-100 transition-opacity"
+                    >
+                      {s.name}
+                    </Link>
                   ))}
                 </div>
               </div>

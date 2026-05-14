@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate, Outlet } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import toast from 'react-hot-toast';
 import { Clock, Loader2 } from 'lucide-react';
@@ -157,6 +157,7 @@ const WeddingAdminProfile = React.lazy(() => import('./modules/wedding-integrate
 const WeddingAdminSettings = React.lazy(() => import('./modules/wedding-integrated/admin/views/AdminSettings'));
 const WeddingManageSupport = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageSupport'));
 const WeddingManageCategories = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageCategories'));
+const WeddingManageTestimonials = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageTestimonials'));
 
 // Lazy Imports - Wedding Vendor Module
 const WeddingVendorOnboardingLayout = React.lazy(() => import('./modules/wedding-integrated/vendor/components/VendorOnboardingLayout'));
@@ -577,7 +578,7 @@ function App() {
 
 
   return (
-    <Router>
+    <>
       <ScrollToTop />
       <Toaster
         position="top-center"
@@ -716,11 +717,15 @@ function App() {
               <Route path="vendors" element={<WeddingVendorListingPage />} />
               <Route path="vendors/:vendorId" element={<WeddingVendorDetailPage />} />
               <Route path="enquiry" element={<WeddingEnquiryPage />} />
-              <Route path="bookings" element={<WeddingMyBookingsPage />} />
-              <Route path="bookings/:bookingId" element={<WeddingBookingDetailPage />} />
-              <Route path="saved" element={<WeddingSavedDestinationsPage />} />
-              <Route path="my-enquiries" element={<WeddingMyEnquiriesPage />} />
-              <Route path="settings" element={<WeddingAccountSettingsPage />} />
+              {/* Private Wedding User Routes */}
+              <Route element={<UserPrivateRoute />}>
+                <Route path="bookings" element={<WeddingMyBookingsPage />} />
+                <Route path="bookings/:bookingId" element={<WeddingBookingDetailPage />} />
+                <Route path="saved" element={<WeddingSavedDestinationsPage />} />
+                <Route path="my-enquiries" element={<WeddingMyEnquiriesPage />} />
+                <Route path="settings" element={<WeddingAccountSettingsPage />} />
+              </Route>
+
               <Route path="real-weddings/by-location/:destinationId" element={<WeddingRealWeddingsByLocation />} />
               <Route path="real-weddings/gallery/:weddingId" element={<WeddingRealWeddingGalleryPage />} />
             </Route>
@@ -738,6 +743,7 @@ function App() {
               <Route path="destinations" element={<WeddingManageDestinations />} />
               <Route path="venues" element={<WeddingManageVenues />} />
               <Route path="categories" element={<WeddingManageCategories />} />
+              <Route path="testimonials" element={<WeddingManageTestimonials />} />
               <Route path="gallery" element={<WeddingManageRealWeddings />} />
               <Route path="support" element={<WeddingManageSupport />} />
               <Route path="profile" element={<WeddingAdminProfile />} />
@@ -801,7 +807,7 @@ function App() {
           </Routes>
         </Suspense>
       </Layout>
-    </Router>
+    </>
   );
 }
 

@@ -100,7 +100,9 @@ const VendorCard = ({ vendor, viewMode = "grid" }) => {
             </div>
 
             <div className="mb-2.5 md:mb-3">
-              <span className="text-[16px] md:text-[18px] font-bold text-[#333]">{vendor.price}</span>
+              <span className="text-[16px] md:text-[18px] font-bold text-[#333]">
+                {typeof vendor.price === 'object' ? `₹${vendor.price.base?.toLocaleString()}` : vendor.price}
+              </span>
               <span className="text-[10px] md:text-[11px] font-medium text-slate-500 ml-1">{vendor.priceUnit}</span>
             </div>
 
@@ -180,7 +182,9 @@ const VendorCard = ({ vendor, viewMode = "grid" }) => {
         </p>
 
         <div className="mb-1 sm:mb-2">
-          <span className="text-[12px] sm:text-[14px] font-extrabold text-[#333]">{vendor.price}</span>
+          <span className="text-[12px] sm:text-[14px] font-extrabold text-[#333]">
+            {typeof vendor.price === 'object' ? `₹${vendor.price.base?.toLocaleString()}` : vendor.price}
+          </span>
           <span className="text-[8px] sm:text-[9px] font-medium text-slate-500 ml-1">{vendor.priceUnit}</span>
         </div>
 

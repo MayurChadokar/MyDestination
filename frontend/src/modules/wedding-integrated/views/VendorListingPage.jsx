@@ -3,6 +3,7 @@ import { useSearchParams, Link } from "react-router-dom";
 import { Search, ChevronRight, Loader2, Inbox } from "lucide-react";
 import { vendorCategories, citiesData } from "../data/vendorListingData";
 import { weddingVendorService } from "../../../services/apiService";
+import { weddingService } from "../../../services/weddingService";
 import VendorCard from "../components/VendorCard";
 import VendorHubPage from "./VendorHubPage";
 import ScrollReveal from "../components/ScrollReveal";
@@ -31,11 +32,27 @@ const ListingView = ({ category: categoryFromProps, cityFromUrl }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCity, setSelectedCity] = useState(cityFromUrl || null);
   const [vendors, setVendors] = useState([]);
+  const [destinations, setDestinations] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchInitialData();
+  }, []);
 
   useEffect(() => {
     fetchVendors();
   }, [category, selectedCity]);
+
+  const fetchInitialData = async () => {
+    try {
+      const dests = await weddingService.getDestinations();
+      if (Array.isArray(dests)) {
+        setDestinations(dests);
+      }
+    } catch (error) {
+      console.error("Failed to fetch destinations", error);
+    }
+  };
 
   const fetchVendors = async () => {
     try {
@@ -65,6 +82,16 @@ const ListingView = ({ category: categoryFromProps, cityFromUrl }) => {
     setSearchQuery("");
     setSelectedCity(null);
   };
+
+  const displayCities = useMemo(() => {
+    if (destinations.length > 0) {
+      return destinations.map(d => ({
+        name: d.name,
+        image: d.image
+      }));
+    }
+    return citiesData;
+  }, [destinations]);
 
   return (
     <div className="bg-[#FFF5F6] min-h-screen">
@@ -109,7 +136,7 @@ const ListingView = ({ category: categoryFromProps, cityFromUrl }) => {
       {/* City Circles */}
       <div className="bg-white border-b border-slate-100 py-4">
         <div className="max-w-7xl mx-auto px-4 md:px-8 flex gap-4 overflow-x-auto no-scrollbar pb-2">
-          {citiesData.map((city) => (
+          {displayCities.map((city) => (
             <button
               key={city.name}
               onClick={() => setSelectedCity(selectedCity === city.name ? null : city.name)}

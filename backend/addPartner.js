@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
-import Partner from './models/Partner.js';
+import Partner from './modules/partner/models/Partner.js';
 import 'dotenv/config';
 
 const createPartner = async () => {

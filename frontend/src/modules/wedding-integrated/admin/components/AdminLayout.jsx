@@ -20,6 +20,8 @@ const AdminLayout = () => {
     if (path.includes('vendors')) return "Vendor Management";
     if (path.includes('enquiries')) return "Wedding Enquiries";
     if (path.includes('destinations')) return "Manage Destinations";
+    if (path.includes('categories')) return "Manage Categories";
+    if (path.includes('testimonials')) return "Manage Testimonials";
     if (path.includes('gallery')) return "Real Weddings Gallery";
     if (path.includes('profile')) return "Edit Profile";
     if (path.includes('settings')) return "Admin Settings";

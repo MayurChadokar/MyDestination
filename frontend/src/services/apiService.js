@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Base URL configuration
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
 
 export const api = axios.create({
   baseURL: API_URL,
@@ -19,13 +19,13 @@ api.interceptors.request.use((config) => {
   const path = window.location.pathname;
 
   if (path.startsWith('/wedding/vendor')) {
-    // Wedding vendor routes — prefer vendor_token
     effectiveToken = vendorToken || token;
   } else if (path.startsWith('/wedding/admin')) {
-    // Wedding admin routes — prefer admin_token
     effectiveToken = adminWeddingToken || adminToken || token;
+  } else if (path.startsWith('/wedding')) {
+    // For general wedding pages like /settings or /my-enquiries
+    effectiveToken = token || vendorToken || adminWeddingToken || adminToken;
   } else if (path.startsWith('/admin')) {
-    // Main admin routes
     effectiveToken = adminToken || token;
   } else {
     effectiveToken = token || adminToken;

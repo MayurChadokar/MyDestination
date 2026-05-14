@@ -52,17 +52,24 @@ import {
   deleteRealWedding
 } from '../controllers/weddingGalleryController.js';
 import {
+  submitTestimonial,
+  getApprovedTestimonials,
+  getAllTestimonials,
+  updateTestimonialStatus,
+  deleteTestimonial
+} from '../controllers/weddingTestimonialController.js';
+import {
   createReview,
   getVendorReviews,
   replyToReview,
   getPublicReviews
 } from '../controllers/weddingReviewController.js';
-import { 
+import {
   loginWeddingAdmin,
   seedWeddingAdmin,
-  getAdminStats, 
-  getAdminCustomers, 
-  getAdminVendors, 
+  getAdminStats,
+  getAdminCustomers,
+  getAdminVendors,
   updateVendorStatus,
   getAdminFinancials
 } from '../controllers/weddingAdminController.js';
@@ -81,9 +88,12 @@ router.get('/gallery', getGallery);
 router.get('/real-weddings', getRealWeddings);
 router.get('/vendors', getPublicVendors);
 router.get('/vendors/:id', getVendorDetail);
+router.get('/testimonials', getApprovedTestimonials);
+router.post('/testimonials', submitTestimonial);
 
 // Public Vendor Application (No auth required)
 router.post('/vendor/apply', applyAsVendor);
+router.patch('/increment-view/:type/:id', incrementView);
 
 // Public Review Routes
 router.get('/reviews/:targetId', getPublicReviews);
@@ -149,5 +159,10 @@ router.delete('/admin/destinations/:id', protect, authorizedRoles('admin', 'supe
 router.post('/admin/categories', protect, authorizedRoles('admin', 'superadmin'), addCategory);
 router.patch('/admin/categories/:id', protect, authorizedRoles('admin', 'superadmin'), updateCategory);
 router.delete('/admin/categories/:id', protect, authorizedRoles('admin', 'superadmin'), deleteCategory);
+
+// Admin Testimonial Routes
+router.get('/admin/testimonials', protect, authorizedRoles('admin', 'superadmin'), getAllTestimonials);
+router.patch('/admin/testimonials/:id/status', protect, authorizedRoles('admin', 'superadmin'), updateTestimonialStatus);
+router.delete('/admin/testimonials/:id', protect, authorizedRoles('admin', 'superadmin'), deleteTestimonial);
 
 export default router;

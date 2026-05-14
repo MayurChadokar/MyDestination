@@ -25,10 +25,12 @@ import {
   ChevronRight,
   TrendingUp,
   Sparkles,
-  Check
+  Check,
+  ChevronDown
 } from "lucide-react";
 import VendorLayout from "../layouts/VendorLayout";
 import { useAuth } from "../../context/AuthContext";
+import { weddingService } from "../../../../services/weddingService";
 
 const ProfileEditor = () => {
   const location = useLocation();
@@ -41,6 +43,7 @@ const ProfileEditor = () => {
   const portfolioInputRef = useRef(null);
   const albumInputRef = useRef(null);
   const [videoUrl, setVideoUrl] = useState("");
+  const [destinations, setDestinations] = useState([]);
   
   // New states for Album Form
   const [showAlbumForm, setShowAlbumForm] = useState(false);
@@ -110,10 +113,15 @@ const ProfileEditor = () => {
     return defaultData;
   });
 
-  // Fetch real vendor profile from API
+  // Fetch initial data (destinations + profile)
   useEffect(() => {
-    const fetchProfile = async () => {
+    const init = async () => {
       try {
+        // Fetch destinations
+        const dests = await weddingService.getDestinations();
+        if (Array.isArray(dests)) setDestinations(dests);
+
+        // Fetch Profile
         const { getVendor } = await import('../../data/vendorApi.js');
         const res = await getVendor();
         if (res.success && res.vendor) {
@@ -135,10 +143,10 @@ const ProfileEditor = () => {
           }));
         }
       } catch (error) {
-        console.error("Failed to fetch profile", error);
+        console.error("Initialization failed", error);
       }
     };
-    fetchProfile();
+    init();
   }, []);
 
   useEffect(() => {
@@ -386,8 +394,20 @@ const ProfileEditor = () => {
                            <div className="space-y-1">
                               <label className="text-[9px] font-black text-[#8E7E77] uppercase tracking-widest ml-1">Location</label>
                               <div className="relative flex items-center group">
-                                 <MapPin className="absolute left-3.5 w-4 h-4 text-slate-400" />
-                                 <input name="location" value={vendorData.location} onChange={handleChange} className="w-full h-11 md:h-14 bg-[#F3E9E2]/20 border border-[#F3E9E2] rounded-xl pl-10 pr-5 text-[13px] md:text-sm font-bold text-[#4A3730] outline-none" placeholder="Location" />
+                                 <MapPin className="absolute left-3.5 w-4 h-4 text-slate-400 z-10" />
+                                 <select 
+                                   name="location" 
+                                   value={vendorData.location} 
+                                   onChange={handleChange} 
+                                   className="w-full h-11 md:h-14 bg-[#F3E9E2]/20 border border-[#F3E9E2] rounded-xl pl-10 pr-10 text-[13px] md:text-sm font-bold text-[#4A3730] outline-none appearance-none"
+                                 >
+                                   <option value="">Select Location</option>
+                                   {destinations.map(d => (
+                                     <option key={d._id || d.id} value={d.name}>{d.name}</option>
+                                   ))}
+                                   {!destinations.length && <option disabled>Loading destinations...</option>}
+                                 </select>
+                                 <ChevronDown className="absolute right-3.5 w-4 h-4 text-slate-400 pointer-events-none" />
                               </div>
                            </div>
                         </div>
@@ -430,6 +450,7 @@ const ProfileEditor = () => {
                                      value={vendorData.basePackage.price.replace('₹', '').trim()} 
                                      onChange={(e) => handlePackageChange('basePackage', 'price', `₹ ${e.target.value.replace('₹', '').trim()}`)} 
                                      className="w-full bg-white border border-[#F3E9E2] rounded-xl pl-8 pr-4 py-2.5 text-xs font-black text-[#4A3730] outline-none" 
+                                     placeholder="0.00"
                                    />
                                 </div>
                              </div>
@@ -458,6 +479,7 @@ const ProfileEditor = () => {
                                      value={vendorData.premiumPackage.price.replace('₹', '').trim()} 
                                      onChange={(e) => handlePackageChange('premiumPackage', 'price', `₹ ${e.target.value.replace('₹', '').trim()}`)} 
                                      className="w-full bg-white border border-[#F3E9E2] rounded-xl pl-8 pr-4 py-2.5 text-xs font-black text-[#4A3730] outline-none" 
+                                     placeholder="0.00"
                                    />
                                 </div>
                              </div>
@@ -509,20 +531,20 @@ const ProfileEditor = () => {
                        )}
 
                        {activeWorkTab === "Albums" && (
-                           <div className="grid grid-cols-2 gap-3">
-                              <button onClick={handleAddAlbum} className="py-8 border border-dashed border-[#F3E9E2] bg-[#F3E9E2]/5 rounded-2xl flex flex-col items-center justify-center gap-2">
-                                 <PlusCircle className="w-6 h-6 text-primary" />
-                                 <span className="text-[9px] font-black uppercase text-[#8E7E77]">New Album</span>
-                              </button>
-                              {vendorData.albums.map((album, idx) => (
-                                <div key={idx} onClick={() => setViewingGallery(idx)} className="aspect-video rounded-2xl overflow-hidden border border-[#F3E9E2] relative group cursor-pointer">
-                                   <img src={album.cover} alt="" className="w-full h-full object-cover" />
-                                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-3">
-                                      <h4 className="text-white text-[10px] font-black leading-tight truncate">{album.name}</h4>
-                                   </div>
-                                </div>
-                              ))}
-                           </div>
+                            <div className="grid grid-cols-2 gap-3">
+                               <button onClick={handleAddAlbum} className="py-8 border border-dashed border-[#F3E9E2] bg-[#F3E9E2]/5 rounded-2xl flex flex-col items-center justify-center gap-2">
+                                  <PlusCircle className="w-6 h-6 text-primary" />
+                                  <span className="text-[9px] font-black uppercase text-[#8E7E77]">New Album</span>
+                               </button>
+                               {vendorData.albums.map((album, idx) => (
+                                 <div key={idx} onClick={() => setViewingGallery(idx)} className="aspect-video rounded-2xl overflow-hidden border border-[#F3E9E2] relative group cursor-pointer">
+                                    <img src={album.cover} alt="" className="w-full h-full object-cover" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-3">
+                                       <h4 className="text-white text-[10px] font-black leading-tight truncate">{album.name}</h4>
+                                    </div>
+                                 </div>
+                               ))}
+                            </div>
                        )}
                        
                        {activeWorkTab === "Videos" && (
@@ -570,7 +592,17 @@ const ProfileEditor = () => {
                   <h4 className="text-sm font-black text-[#4A3730] uppercase tracking-wider">New Album</h4>
                   <div className="space-y-3">
                      <input placeholder="Album Title" value={albumForm.name} onChange={(e) => setAlbumForm(prev => ({ ...prev, name: e.target.value }))} className="w-full h-11 border border-[#F3E9E2] rounded-xl px-4 text-xs font-bold outline-none focus:border-primary transition-all" />
-                     <input placeholder="Shot Location" value={albumForm.location} onChange={(e) => setAlbumForm(prev => ({ ...prev, location: e.target.value }))} className="w-full h-11 border border-[#F3E9E2] rounded-xl px-4 text-xs font-bold outline-none focus:border-primary transition-all" />
+                     <div className="relative">
+                       <select 
+                         value={albumForm.location} 
+                         onChange={(e) => setAlbumForm(prev => ({ ...prev, location: e.target.value }))} 
+                         className="w-full h-11 border border-[#F3E9E2] rounded-xl px-4 text-xs font-bold outline-none appearance-none bg-white focus:border-primary"
+                       >
+                         <option value="">Select Location</option>
+                         {destinations.map(d => <option key={d._id || d.id} value={d.name}>{d.name}</option>)}
+                       </select>
+                       <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                     </div>
                      <button onClick={triggerAlbumUpload} className="w-full py-3.5 rounded-xl bg-primary text-white font-black uppercase text-[10px] tracking-widest shadow-lg shadow-primary/20 hover:scale-105 transition-all">Select Photos</button>
                      <button onClick={() => setShowAlbumForm(false)} className="w-full py-3.5 text-[#8E7E77] font-black uppercase text-[10px] hover:text-primary transition-colors">Cancel</button>
                   </div>
@@ -583,3 +615,4 @@ const ProfileEditor = () => {
 };
 
 export default ProfileEditor;
+ult ProfileEditor;

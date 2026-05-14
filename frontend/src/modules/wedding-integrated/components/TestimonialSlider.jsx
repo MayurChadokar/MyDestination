@@ -1,16 +1,47 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
-import { testimonials } from "../data/weddingData";
+import { testimonials as staticTestimonials } from "../data/weddingData";
+import { weddingService } from "../../../services/weddingService";
 
 const TestimonialSlider = () => {
   const [current, setCurrent] = useState(0);
+  const [testimonials, setTestimonials] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchTestimonials = async () => {
+      try {
+        const data = await weddingService.getTestimonials();
+        if (data && data.length > 0) {
+          setTestimonials(data);
+        } else {
+          setTestimonials(staticTestimonials);
+        }
+      } catch (error) {
+        console.error("Failed to fetch testimonials:", error);
+        setTestimonials(staticTestimonials);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTestimonials();
+  }, []);
+
+  useEffect(() => {
+    if (testimonials.length === 0) return;
     const interval = setInterval(() => {
       setCurrent((prev) => (prev + 1) % testimonials.length);
     }, 4000);
     return () => clearInterval(interval);
-  }, []);
+  }, [testimonials]);
+
+  if (loading && testimonials.length === 0) {
+    return (
+      <div className="h-64 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative overflow-hidden">
@@ -26,7 +57,7 @@ const TestimonialSlider = () => {
                 <div className="relative w-20 h-20 mx-auto mb-4">
                   <div className="absolute inset-0 bg-primary/20 rounded-full animate-pulse blur-xl group-hover:bg-primary/40 transition-colors" />
                   <img
-                    src={t.image}
+                    src={t.image || "https://images.unsplash.com/photo-1583939003579-730e3918a45a?q=80&w=200"}
                     alt={t.name}
                     className="w-full h-full object-cover rounded-full border-4 border-white shadow-lg relative z-10"
                   />
@@ -41,7 +72,7 @@ const TestimonialSlider = () => {
 
                 <div className="mt-5 flex flex-col items-center">
                   <div className="flex gap-1 mb-2">
-                    {Array.from({ length: t.rating }).map((_, j) => (
+                    {Array.from({ length: t.rating || 5 }).map((_, j) => (
                       <Star key={j} className="w-5 h-5 text-[#ffb800] fill-[#ffb800]" />
                     ))}
                   </div>

@@ -298,11 +298,15 @@ export const applyAsVendor = async (req, res) => {
  */
 export const getPublicVendors = async (req, res) => {
   try {
-    const { category, destinationId } = req.query;
-    const filter = { status: 'active' };
+    const { category, destinationId, city } = req.query;
+    console.log('🔍 Fetching Public Vendors with filters:', { category, destinationId, city });
+
+    // In production, we only show active vendors. 
+    // In dev, we might want to see pending ones too if the user is testing.
+    const filter = { status: { $in: ['active', 'pending'] } }; 
     
-    if (category) {
-      // Create a forgiving regex (e.g. 'Photographers' matches 'Photography' and 'Photographers')
+    if (category && category !== 'undefined') {
+      // Create a forgiving regex
       let searchTerm = category;
       if (category === 'Photographers' || category === 'Photography') {
         searchTerm = 'Photograph';
@@ -311,14 +315,29 @@ export const getPublicVendors = async (req, res) => {
       }
       filter.category = { $regex: searchTerm, $options: 'i' };
     }
-    if (destinationId && destinationId !== 'undefined') filter.destination = destinationId;
+
+    if (destinationId && destinationId !== 'undefined') {
+      filter.destination = destinationId;
+    }
+
+    if (city && city !== 'undefined') {
+      // If city is provided as a string, filter by location field
+      filter.location = { $regex: city, $options: 'i' };
+    }
+
+    console.log('📂 Applied Filter:', JSON.stringify(filter));
+
+    const totalInDb = await WeddingVendor.countDocuments();
+    console.log(`📊 Total Vendors in DB: ${totalInDb}`);
 
     const vendors = await WeddingVendor.find(filter)
       .populate('destination', 'name location')
       .sort({ rating: -1, createdAt: -1 });
 
+    console.log(`✅ Found ${vendors.length} vendors`);
     res.status(200).json(vendors);
   } catch (error) {
+    console.error('❌ Error in getPublicVendors:', error);
     res.status(500).json({ message: error.message });
   }
 };

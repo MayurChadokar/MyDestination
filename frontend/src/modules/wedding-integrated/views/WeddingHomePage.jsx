@@ -20,6 +20,7 @@ import { weddingVendorService } from "../../../services/apiService";
 import PlannerCard from "../components/PlannerCard";
 import { budgetBuckets } from "../data/weddingData";
 import StackedCarousel from "../components/StackedCarousel";
+import TestimonialForm from "../components/TestimonialForm";
 
 const steps = [
   {
@@ -76,6 +77,7 @@ const WeddingHomePage = () => {
   const [topPlanners, setTopPlanners] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isPlannersLoading, setIsPlannersLoading] = useState(true);
+  const [showTestimonialForm, setShowTestimonialForm] = useState(false);
 
   useEffect(() => {
     const fetchDestinations = async () => {
@@ -321,6 +323,20 @@ const WeddingHomePage = () => {
           <ScrollReveal>
             <TestimonialSlider />
           </ScrollReveal>
+          
+          <div className="text-center mt-10">
+            <button
+              onClick={() => setShowTestimonialForm(true)}
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-full text-sm font-black bg-primary/5 text-primary border border-primary/20 transition-all duration-300 hover:bg-primary hover:text-white hover:shadow-lg hover:-translate-y-1"
+            >
+              Share Your Wedding Story
+            </button>
+          </div>
+          
+          <TestimonialForm 
+            isOpen={showTestimonialForm} 
+            onClose={() => setShowTestimonialForm(false)} 
+          />
         </div>
       </section>
 

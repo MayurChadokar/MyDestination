@@ -148,7 +148,7 @@ const AirwaysHome = () => {
         <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-center z-50">
            <div className="h-12 px-5 rounded-2xl bg-white/20 backdrop-blur-xl border border-white/20 flex items-center gap-3">
               <Sparkles size={16} className="text-sky-300" />
-              <span className="text-[11px] font-black text-white uppercase tracking-widest">Rydon Airways</span>
+              <span className="text-[11px] font-black text-white uppercase tracking-widest">My Desination Airways</span>
            </div>
            <button onClick={() => navigate('/taxi/user')} className="h-12 w-12 rounded-2xl bg-white/20 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white">
               <ArrowLeft size={20} />

@@ -147,7 +147,7 @@ const WeddingAdminDashboard = React.lazy(() => import('./modules/wedding-integra
 const WeddingAdminLogin = React.lazy(() => import('./modules/wedding-integrated/admin/views/AdminLogin'));
 const WeddingManageVendors = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageVendors'));
 const WeddingManageEnquiries = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageEnquiries'));
-const WeddingAddVendors = React.lazy(() => import('./modules/wedding-integrated/admin/views/AddVendors'));
+const WeddingAddCategory = React.lazy(() => import('./modules/wedding-integrated/admin/views/AddCategory'));
 const WeddingManageCustomers = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageCustomers'));
 const WeddingManageFinancials = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageFinancials'));
 const WeddingManageDestinations = React.lazy(() => import('./modules/wedding-integrated/admin/views/ManageDestinations'));
@@ -736,7 +736,7 @@ function App() {
               <Route index element={<Navigate to="/wedding/admin/dashboard" replace />} />
               <Route path="dashboard" element={<WeddingAdminDashboard />} />
               <Route path="vendors/*" element={<WeddingManageVendors />} />
-              <Route path="add-vendor" element={<WeddingAddVendors />} />
+              <Route path="add-category" element={<WeddingAddCategory />} />
               <Route path="enquiries" element={<WeddingManageEnquiries />} />
               <Route path="customers" element={<WeddingManageCustomers />} />
               <Route path="financials" element={<WeddingManageFinancials />} />

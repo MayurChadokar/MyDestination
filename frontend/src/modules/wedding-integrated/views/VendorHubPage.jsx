@@ -46,54 +46,67 @@ const VendorHubPage = () => {
         </h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {categories.map((cat) => (
-            <Link
-              key={cat.name}
-              to={`/wedding/vendors?category=${encodeURIComponent(cat.name)}`}
-              className="group relative block overflow-hidden transition-all duration-300 hover:shadow-md"
-              style={{ height: "140px", backgroundColor: cat.bgColor || "#F5F0EB" }}
-            >
-              {/* Text content */}
-              <div className="absolute inset-0 flex flex-col justify-center pl-8 pr-[160px] z-10">
-                <div className="flex items-center gap-1.5 mb-1">
-                  <h3
-                    className="text-[17px] font-bold tracking-tight"
-                    style={{ color: cat.textColor || "#333", fontFamily: "'Playfair Display', serif" }}
+          {categories.map((cat) => {
+            const hasValidImage = cat.image && (cat.image.startsWith('http') || cat.image.startsWith('/'));
+            const imageUrl = hasValidImage 
+              ? cat.image 
+              : (cat.icon && cat.icon.startsWith('http') 
+                ? cat.icon 
+                : "https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=600&auto=format&fit=crop");
+            
+            const bgColor = cat.bgColor || "#FFF5F6";
+            const textColor = cat.textColor || "#9D313D";
+            const subText = cat.subcategories || cat.description || "Discover verified professionals and services";
+
+            return (
+              <Link
+                key={cat.name}
+                to={`/wedding/vendors?category=${encodeURIComponent(cat.name)}`}
+                className="group relative block overflow-hidden transition-all duration-300 hover:shadow-md rounded-2xl"
+                style={{ height: "140px", backgroundColor: bgColor }}
+              >
+                {/* Text content */}
+                <div className="absolute inset-0 flex flex-col justify-center pl-8 pr-[160px] z-10">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <h3
+                      className="text-[17px] font-bold tracking-tight"
+                      style={{ color: textColor, fontFamily: "'Playfair Display', serif" }}
+                    >
+                      {cat.name}
+                    </h3>
+                    <ChevronRight
+                      className="w-4 h-4 shrink-0 mt-[2px] opacity-70 transition-transform group-hover:translate-x-1"
+                      style={{ color: textColor }}
+                    />
+                  </div>
+                  <p
+                    className="text-[13px] font-medium leading-relaxed opacity-70 line-clamp-2 pr-4"
+                    style={{ color: textColor }}
                   >
-                    {cat.name}
-                  </h3>
-                  <ChevronRight
-                    className="w-4 h-4 shrink-0 mt-[2px] opacity-70 transition-transform group-hover:translate-x-1"
-                    style={{ color: cat.textColor || "#666" }}
+                    {subText}
+                  </p>
+                </div>
+
+                {/* Large circular image intersecting the card */}
+                <div
+                  className="absolute overflow-hidden rounded-full border border-white/20"
+                  style={{
+                    width: "280px",
+                    height: "280px",
+                    right: "-100px",
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                  }}
+                >
+                  <img
+                    src={imageUrl}
+                    alt={cat.name}
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                   />
                 </div>
-                <p
-                  className="text-[13px] font-medium leading-relaxed opacity-70 line-clamp-2 pr-4"
-                  style={{ color: cat.textColor || "#666" }}
-                >
-                  {cat.subcategories}
-                </p>
-              </div>
-
-              {/* Large circular image intersecting the card to create a gentle arc with sharp angles */}
-              <div
-                className="absolute overflow-hidden rounded-full"
-                style={{
-                  width: "280px",
-                  height: "280px",
-                  right: "-100px",  // Adjust to control the size of the arc
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                }}
-              >
-                <img
-                  src={cat.image}
-                  alt={cat.name}
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       </section>
 

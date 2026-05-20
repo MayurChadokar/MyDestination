@@ -71,7 +71,9 @@ import {
   getAdminCustomers,
   getAdminVendors,
   updateVendorStatus,
-  getAdminFinancials
+  getAdminFinancials,
+  updateCustomerBlockStatus,
+  deleteCustomer
 } from '../controllers/weddingAdminController.js';
 import { protect, authorizedRoles, optionalProtect } from '../../../middlewares/authMiddleware.js';
 
@@ -134,6 +136,8 @@ router.get('/admin/enquiries', protect, authorizedRoles('admin', 'superadmin'), 
 router.patch('/admin/enquiries/:id/status', protect, authorizedRoles('admin', 'superadmin'), updateEnquiryStatus);
 router.delete('/admin/enquiries/:id', protect, authorizedRoles('admin', 'superadmin'), deleteEnquiry);
 router.get('/admin/customers', protect, authorizedRoles('admin', 'superadmin'), getAdminCustomers);
+router.patch('/admin/customers/:id/block', protect, authorizedRoles('admin', 'superadmin'), updateCustomerBlockStatus);
+router.delete('/admin/customers/:id', protect, authorizedRoles('admin', 'superadmin'), deleteCustomer);
 
 // Admin Gallery/Weddings
 router.post('/admin/gallery', protect, authorizedRoles('admin', 'superadmin'), addGalleryImage);

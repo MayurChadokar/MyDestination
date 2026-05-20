@@ -119,9 +119,21 @@ export const getCategories = async (req, res) => {
 
 export const addCategory = async (req, res) => {
   try {
-    const { name, slug, description, icon, parentCategory, type } = req.body;
+    const { name, slug, description, icon, parentCategory, type, image, bgColor, textColor } = req.body;
+    
+    let imageUrl = image;
+    if (image && image.startsWith('data:image')) {
+      try {
+        const uploadResponse = await uploadToCloudinary(image, 'wedding/categories');
+        imageUrl = uploadResponse.secure_url;
+      } catch (uploadError) {
+        console.warn('Cloudinary upload failed for category image, using fallback.', uploadError.message);
+        imageUrl = image;
+      }
+    }
+
     const newCat = await WeddingCategory.create({
-      name, slug, description, icon, parentCategory, type
+      name, slug, description, icon, parentCategory, type, image: imageUrl, bgColor, textColor
     });
     res.status(201).json({ success: true, category: newCat });
   } catch (error) {
@@ -133,6 +145,16 @@ export const updateCategory = async (req, res) => {
   try {
     const { id } = req.params;
     const updates = req.body;
+
+    if (updates.image && updates.image.startsWith('data:image')) {
+      try {
+        const uploadResponse = await uploadToCloudinary(updates.image, 'wedding/categories');
+        updates.image = uploadResponse.secure_url;
+      } catch (uploadError) {
+        console.warn('Cloudinary upload failed for category image update, using fallback.', uploadError.message);
+      }
+    }
+
     const updated = await WeddingCategory.findByIdAndUpdate(id, updates, { new: true });
     res.status(200).json({ success: true, category: updated });
   } catch (error) {

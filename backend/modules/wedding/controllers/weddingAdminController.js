@@ -116,13 +116,51 @@ export const getAdminStats = async (req, res) => {
 export const getAdminCustomers = async (req, res) => {
   try {
     const customers = await User.find({ role: 'user' })
-      .select('name email phone createdAt')
+      .select('name email phone createdAt isBlocked profileImage')
       .sort({ createdAt: -1 });
     res.status(200).json(customers);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
+export const updateCustomerBlockStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isBlocked } = req.body;
+
+    const customer = await User.findOneAndUpdate(
+      { _id: id, role: 'user' },
+      { isBlocked },
+      { new: true }
+    );
+
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    res.status(200).json({ success: true, message: `Customer ${isBlocked ? 'blocked' : 'unblocked'} successfully`, customer });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const deleteCustomer = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const customer = await User.findOneAndDelete({ _id: id, role: 'user' });
+
+    if (!customer) {
+      return res.status(404).json({ message: 'Customer not found' });
+    }
+
+    res.status(200).json({ success: true, message: 'Customer deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 
 export const getAdminVendors = async (req, res) => {
   try {

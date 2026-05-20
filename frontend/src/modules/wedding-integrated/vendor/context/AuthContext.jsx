@@ -26,13 +26,13 @@ export const AuthProvider = ({ children }) => {
   const signup = async (userData) => {
     try {
       const response = await api.post('/wedding/vendor/register', userData);
-      
+
       if (response.data.success) {
         const { token, user: newUser } = response.data;
         localStorage.setItem("vendor_token", token);
         localStorage.setItem("vendor_user", JSON.stringify(newUser));
         // Also set global token for apiService interceptor if needed
-        localStorage.setItem("token", token); 
+        localStorage.setItem("token", token);
         setUser(newUser);
         return { success: true, user: newUser };
       }

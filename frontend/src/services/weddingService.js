@@ -102,6 +102,24 @@ export const weddingService = {
     }
   },
 
+  updateCustomerBlockStatus: async (id, isBlocked) => {
+    try {
+      const response = await api.patch(`/wedding/admin/customers/${id}/block`, { isBlocked });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
+  deleteCustomer: async (id) => {
+    try {
+      const response = await api.delete(`/wedding/admin/customers/${id}`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error.message;
+    }
+  },
+
   getGallery: async (params = {}) => {
     try {
       const response = await api.get('/wedding/gallery', { params });

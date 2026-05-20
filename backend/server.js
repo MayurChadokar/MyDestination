@@ -133,6 +133,8 @@ import { taxiRouter } from './modules/taxi/routes/index.js';
 import { configureTaxiSocketServer } from './modules/taxi/socket/index.js';
 import { restoreScheduledDispatches } from './modules/taxi/services/dispatchService.js';
 import weddingRoutes from './modules/wedding/routes/weddingRoutes.js';
+import notificationRoutes from './modules/notification/routes/notificationRoutes.js';
+
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -154,6 +156,8 @@ app.use('/api/blogs', blogRoutes);
 app.use('/api/taxi', taxiRouter);
 app.use('/api/v1', taxiRouter);
 app.use('/api/wedding', weddingRoutes);
+app.use('/api/notifications', notificationRoutes);
+
 
 // Global Error Handler
 app.use((err, req, res, next) => {

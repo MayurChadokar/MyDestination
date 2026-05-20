@@ -23,7 +23,7 @@ const VendorCard = ({ vendor, viewMode = "grid" }) => {
           {/* Featured image */}
           <div className="relative h-48 md:h-full overflow-hidden">
             <img
-              src={vendor.images?.[0] || vendor.image}
+              src={vendor.images?.[0] || vendor.image || 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2069&auto=format&fit=crop'}
               alt={vendor.name}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
             />
@@ -137,7 +137,7 @@ const VendorCard = ({ vendor, viewMode = "grid" }) => {
     >
       <div className="relative w-full aspect-[2.2/1] sm:aspect-[16/9] shrink-0 overflow-hidden bg-slate-100">
         <img
-          src={vendor.images?.[0] || vendor.image}
+          src={vendor.images?.[0] || vendor.image || 'https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=2069&auto=format&fit=crop'}
           alt={vendor.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
         />

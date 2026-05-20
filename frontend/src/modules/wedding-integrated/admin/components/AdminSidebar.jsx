@@ -18,7 +18,8 @@ import {
   Megaphone,
   Briefcase,
   Building2,
-  Palette
+  Palette,
+  FolderPlus
 } from 'lucide-react';
 import { adminStyles } from '../theme/themeConfig';
 import toast from 'react-hot-toast';
@@ -34,7 +35,7 @@ const menuItems = [
       { label: 'Pending Approvals', path: '/wedding/admin/vendors/pending', icon: UserPlus },
     ]
   },
-  { icon: UserPlus, label: 'Add Vendors', path: '/wedding/admin/add-vendor' },
+  { icon: FolderPlus, label: 'Add Category', path: '/wedding/admin/add-category' },
   { icon: Briefcase, label: 'Manage Customers', path: '/wedding/admin/customers' },
   { icon: MessageSquare, label: 'Enquiries', path: '/wedding/admin/enquiries' },
   { icon: CreditCard, label: 'Financials', path: '/wedding/admin/financials' },

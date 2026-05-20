@@ -1,6 +1,7 @@
 import WeddingEnquiry from '../models/WeddingEnquiry.js';
 import WeddingVendor from '../models/WeddingVendor.js';
 import WeddingVenue from '../models/WeddingVenue.js';
+import { createNotification } from '../../notification/controllers/notificationController.js';
 
 /**
  * @desc    Create a new enquiry (User Side)
@@ -44,12 +45,36 @@ export const createEnquiry = async (req, res) => {
       user: req.user ? req.user._id : null
     });
 
+    // Create Notification for Vendor
+    if (targetId) {
+      let vendorUserId = null;
+      if (targetType === 'Venue' || targetType === 'venue') {
+        const venue = await WeddingVenue.findById(targetId);
+        if (venue) vendorUserId = venue.vendor;
+      } else {
+        const vendor = await WeddingVendor.findById(targetId);
+        if (vendor) vendorUserId = vendor.user;
+      }
+
+      if (vendorUserId) {
+        await createNotification({
+          recipient: vendorUserId,
+          sender: req.user?._id,
+          title: 'New Wedding Enquiry',
+          message: `You have received a new enquiry from ${name}.`,
+          type: 'enquiry',
+          link: '/wedding/vendor/leads'
+        });
+      }
+    }
+
     res.status(201).json({ success: true, enquiry });
   } catch (error) {
     console.error('Create Enquiry Error:', error);
     res.status(500).json({ message: error.message });
   }
 };
+
 
 /**
  * @desc    Get enquiries for current user

@@ -30,7 +30,8 @@ import {
 } from "lucide-react";
 import VendorLayout from "../layouts/VendorLayout";
 import { useAuth } from "../../context/AuthContext";
-import { weddingService } from "../../../../services/weddingService";
+import { weddingService } from "../../../../../services/weddingService";
+
 
 const ProfileEditor = () => {
   const location = useLocation();
@@ -615,4 +616,4 @@ const ProfileEditor = () => {
 };
 
 export default ProfileEditor;
-ult ProfileEditor;
+

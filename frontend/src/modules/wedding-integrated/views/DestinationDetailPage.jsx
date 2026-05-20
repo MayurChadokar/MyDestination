@@ -106,7 +106,7 @@ const DestinationDetailPage = () => {
       {/* Gallery Hero */}
       <section className="relative h-[45vh] md:h-[60vh] min-h-[300px] md:min-h-[400px] overflow-hidden">
         <img
-          src={dest.image}
+          src={dest.image || 'https://images.unsplash.com/photo-1519741497674-611481863552?q=80&w=2070&auto=format&fit=crop'}
           alt={dest.name}
           className="w-full h-full object-cover"
         />

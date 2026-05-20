@@ -154,7 +154,7 @@ const AdminLayout = () => {
                 <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-8 shadow-sm z-10 shrink-0">
                     <div className="flex items-center gap-4 flex-1">
                         <h1 className="text-xl font-bold text-gray-800">
-                            Rukkoo.in Admin
+                            Admin
                         </h1>
                         <div className="hidden md:flex items-center relative max-w-md w-full ml-8">
                             <Search size={16} className="absolute left-3 text-gray-400" />

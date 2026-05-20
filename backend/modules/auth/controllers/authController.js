@@ -9,6 +9,7 @@ import jwt from 'jsonwebtoken';
 import smsService from '../../../utils/smsService.js';
 import referralService from '../../../services/referralService.js';
 import { uploadToCloudinary, deleteFromCloudinary, uploadBase64ToCloudinary } from '../../../utils/cloudinary.js';
+import fs from 'fs';
 
 const generateToken = (id, role) => {
   // No expiresIn: tokens never expire; users only get logged out manually
@@ -87,8 +88,8 @@ export const sendOtp = async (req, res) => {
         if (user.partnerApprovalStatus !== 'approved') {
           return res.status(403).json({
             success: false,
-            message: user.partnerApprovalStatus === 'rejected' 
-              ? 'Your application has been rejected. Please contact support.' 
+            message: user.partnerApprovalStatus === 'rejected'
+              ? 'Your application has been rejected. Please contact support.'
               : 'Your account is pending admin approval. You will be able to login once approved.',
             partnerApprovalStatus: user.partnerApprovalStatus
           });
@@ -317,7 +318,7 @@ export const verifyOtp = async (req, res) => {
 
     // 1. Find User (if any)
     let user = await Model.findOne({ phone }).select('+otp +otpExpires');
-    
+
     // 2. Find registration-flow OTP Record (if any)
     const otpRecord = await Otp.findOne({ phone });
 
@@ -329,31 +330,31 @@ export const verifyOtp = async (req, res) => {
       verified = true;
       user.otp = undefined;
       user.otpExpires = undefined;
-      
+
       // If found but deleted, this is a direct login-based re-activation
       if (user.isDeleted) {
         user.isDeleted = false;
         console.log(`[AUTH] Account ${user._id} re-activated via Login flow.`);
       }
-    } 
+    }
     // Try verifying with Otp Record (Registration Flow / Deleted Account Recovery)
     else if (otpRecord && otpRecord.otp === otp && otpRecord.expiresAt >= Date.now()) {
       if (otpRecord.tempData && otpRecord.tempData.role && otpRecord.tempData.role !== role) {
         return res.status(400).json({ message: 'Invalid role context.' });
       }
       verified = true;
-      
+
       if (user) {
         // Exists but was deleted (handled via registration path)
         if (user.isDeleted) {
-           user.isDeleted = false;
-           console.log(`[AUTH] Account ${user._id} re-activated via Registration flow.`);
+          user.isDeleted = false;
+          console.log(`[AUTH] Account ${user._id} re-activated via Registration flow.`);
         }
       } else {
         // Truly a new user
         isRegistration = true;
       }
-      
+
       await Otp.deleteOne({ phone });
     }
 
@@ -999,3 +1000,58 @@ export const uploadDocsBase64 = async (req, res) => {
 };
 
 
+/**
+ * @desc    Upload Profile Image
+ * @route   POST /api/auth/upload-profile-image
+ * @access  Private
+ */
+export const uploadProfileImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image provided' });
+    }
+
+    const currentUser = req.user;
+    let Model;
+    if (currentUser.role === 'partner' || currentUser.role === 'vendor') {
+      Model = Partner;
+    } else if (['admin', 'superadmin'].includes(currentUser.role)) {
+      Model = Admin;
+    } else {
+      Model = User;
+    }
+
+    const user = await Model.findById(currentUser._id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Upload to Cloudinary
+    const result = await uploadToCloudinary(req.file.path, 'profiles');
+
+    // Delete old image if exists
+    if (user.profileImagePublicId) {
+      await deleteFromCloudinary(user.profileImagePublicId);
+    }
+
+    // Update database
+    user.profileImage = result.url;
+    user.profileImagePublicId = result.public_id;
+    await user.save();
+
+    // Clean up local file
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile image updated successfully',
+      profileImage: user.profileImage
+    });
+
+  } catch (error) {
+    console.error('Upload Profile Image Error:', error);
+    res.status(500).json({ message: 'Server error uploading image' });
+  }
+};
